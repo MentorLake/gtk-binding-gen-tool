@@ -10,26 +10,15 @@ public class DocsParser
 {
 	public static MethodDeclaration ParseMethodHtml(string methodFilePath)
 	{
-		if (methodFilePath.Contains("https://"))
-		{
-			return null;
-		}
-
+		if (methodFilePath.Contains("https://"))  return null;
 		var xml = LoadHtml(methodFilePath);
-
-		if (xml.XPathSelectElement("body//h3[contains(text(), 'Function Macro')]") != null)
-		{
-			//Console.WriteLine(methodFilePath);
-			return null;
-		}
-
+		if (xml.XPathSelectElement("body//h3[contains(text(), 'Function Macro')]") != null) return null;
 		var decl = xml.XPathSelectElement("body//h4[contains(text(), 'Declaration')]/..//div[contains(@class, 'docblock')]").Value;
 		var parameterComments = xml.XPathSelectElement("body//h4[contains(text(), 'Parameters')]/..//dl[@class='arguments']");
-		var description = xml.XPathSelectElement("body//h4[contains(text(), 'Return value')]/..//div[@class='arg-description']")?.Value ?? "";
-
+		var returnTypeComments = xml.XPathSelectElement("body//h4[contains(text(), 'Return value')]/..//div[@class='arg-description']")?.Value ?? "";
 		var parser = new CDeclParser(new CDeclLexer(decl));
 		var methodDecl = parser.ReadMethodDeclaration();
-		methodDecl.ReturnTypeComments = description;
+		methodDecl.ReturnTypeComments = returnTypeComments;
 
 		foreach (var p in methodDecl.Parameters)
 		{
@@ -90,6 +79,13 @@ public class DocsParser
 				.XPathSelectElements("body//h4[contains(text(), 'Signals')]/../div[@class='docblock']//a")
 				.Select(a => a.Attribute("href").Value)
 				.Select(x => Regex.Replace(x, @"^.*\.([^\.]+)\.html", "$1"))
+				.ToList(),
+			Functions = xml
+				.XPathSelectElements("body//h4[contains(text(), 'Functions')]/../div[@class='docblock']/div//a")
+				.Select(a => a.Attribute("href").Value)
+				.Select(x => Path.Join(classDirectory, x))
+				.Where(f => File.Exists(f))
+				.Select(x => ParseMethodHtml(x))
 				.ToList(),
 			Methods = xml
 				.XPathSelectElements("body//div[@class='toggle-wrapper methods']/h4[contains(text(), 'Instance methods')]/../div[@class='docblock']/div")

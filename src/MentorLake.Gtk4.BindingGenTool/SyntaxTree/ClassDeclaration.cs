@@ -8,4 +8,5 @@ public class ClassDeclaration
 	public List<MethodDeclaration> Methods { get; set; } = new();
 	public List<MethodDeclaration> Constructors { get; set; } = new();
 	public List<string> Signals { get; set; }
+	public List<MethodDeclaration> Functions { get; set; }
 }

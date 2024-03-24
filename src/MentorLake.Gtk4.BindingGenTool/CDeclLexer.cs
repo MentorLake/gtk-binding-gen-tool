@@ -21,7 +21,8 @@ public enum TokenType : int
 	Number,
 	VolatileKeyword,
 	TypedefKeyword,
-	VarArgs
+	VarArgs,
+	Period
 }
 
 public record Token
@@ -37,6 +38,11 @@ public class CDeclLexer(string source)
 
 	public Token PeekNext()
 	{
+		if (_pushedBackTokens.Any())
+		{
+			return _pushedBackTokens.Peek();
+		}
+
 		var priorIndex = _currentIndex;
 		var token = Next();
 		_currentIndex = priorIndex;
@@ -71,6 +77,7 @@ public class CDeclLexer(string source)
 			if (currentChar == ",")  return new Token() { TokenType = TokenType.Comma, Text = currentChar };
 			if (currentChar == ":")  return new Token() { TokenType = TokenType.Colon, Text = currentChar };
 			if (currentChar == "." && PeekChars(2) == "..") return new Token() { TokenType = TokenType.VarArgs, Text = "." + ReadChars(2) };
+			if (currentChar == ".")  return new Token() { TokenType = TokenType.Period, Text = currentChar };
 			if (char.IsNumber(currentChar[0]))  return new Token() { TokenType = TokenType.Number, Text = ReadNumber() };
 			if (currentChar == "/" && PeekChars(1) == "*") return new Token() { TokenType = TokenType.Comment, Text = ReadComment() };
 			if (currentChar == "u" && TryReadWord("nion")) return new Token() { TokenType = TokenType.StructKeyword, Text = "u" + ReadWord() };

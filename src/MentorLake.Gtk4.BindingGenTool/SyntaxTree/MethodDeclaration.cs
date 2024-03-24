@@ -40,35 +40,59 @@ public class MethodDeclaration
 		return ReturnTypeComments.Contains("An array of");
 	}
 
-	public string ToAdaptorMethod(string className, List<LibraryDeclaration> libraries)
+	public string ToConstructorAdaptor(string className, List<LibraryDeclaration> libraries)
 	{
 		var output = new StringBuilder();
-		var useFluentDsl = ReturnType.ToCString() == "void" && Parameters.Any() && Parameters.First().ToCSharpTypeWithModifiers(libraries).EndsWith("Handle");
+		var parameters = string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)));
+		var methodName = Name.ToPascalCase().Replace(className, "");
+		var returnType = ToCSharpReturnType();
+		var externCall = $"{className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});";
 
-		if (useFluentDsl)
+		output.AppendLine($"\tpublic static {className}Handle {methodName}({parameters})");
+		output.AppendLine("\t{");
+		output.AppendLine($"\t\treturn {externCall}");
+		output.AppendLine("\t}");
+		return output.ToString();
+	}
+
+	public string ToStaticClassMethodAdaptor(string className, List<LibraryDeclaration> libraries)
+	{
+		var output = new StringBuilder();
+		var parameters = string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)));
+		var methodName = Name.ToPascalCase().Replace(className, "");
+		var returnType = ToCSharpReturnType();
+		var externCall = $"{className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});";
+
+		output.AppendLine($"\tpublic static {returnType} {methodName}({parameters})");
+		output.AppendLine("\t{");
+		output.AppendLine($"\t\t{(returnType == "void" ? "" : "return ")}{externCall}");
+		output.AppendLine("\t}");
+		return output.ToString();
+	}
+
+	public string ToInstanceMethodAdaptor(string className, List<LibraryDeclaration> libraries)
+	{
+		var output = new StringBuilder();
+		var parameters = "this " + string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)));
+		parameters = Regex.Replace(parameters, @"this ([^ ]+)Handle(.*)", $"this {className}Handle$2");
+
+		var methodName = Name.ToPascalCase().Replace(className, "");
+		var returnType = ToCSharpReturnType();
+		var externCall = $"{className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});";
+
+		if (returnType == "void")
 		{
-			if (Parameters.First().ToCSharpTypeWithModifiers(libraries) == className + "Handle")
-			{
-				output.AppendLine($"\tpublic static {className}Handle {Name.ToPascalCase().Replace(className, "")}(this {string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)))})");
-				output.AppendLine("\t{");
-				output.AppendLine($"\t\t{className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});");
-				output.AppendLine($"\t\treturn {Parameters.First().Name.NormalizeName()};");
-				output.AppendLine("\t}");
-			}
-			else
-			{
-				output.AppendLine($"\tpublic static {className}Handle {Name.ToPascalCase().Replace(className, "")}(this {className}Handle @handle, {string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)))})");
-				output.AppendLine("\t{");
-				output.AppendLine($"\t\t{className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});");
-				output.AppendLine($"\t\treturn @handle;");
-				output.AppendLine("\t}");
-			}
+			output.AppendLine($"\tpublic static {className}Handle {methodName}({parameters})");
+			output.AppendLine("\t{");
+			output.AppendLine($"\t\t{externCall}");
+			output.AppendLine($"\t\treturn {Parameters.First().Name.NormalizeName()};");
+			output.AppendLine("\t}");
 		}
 		else
 		{
-			output.AppendLine($"\tpublic static {ToCSharpReturnType()} {Name.ToPascalCase().Replace(className, "")}(this {string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)))})");
+			output.AppendLine($"\tpublic static {returnType} {methodName}({parameters})");
 			output.AppendLine("\t{");
-			output.AppendLine($"\t\treturn {className}Externs.{Name}({string.Join(", ", Parameters.Select(p => p.ToCSharpArgument(libraries)))});");
+			output.AppendLine($"\t\treturn {externCall}");
 			output.AppendLine("\t}");
 		}
 

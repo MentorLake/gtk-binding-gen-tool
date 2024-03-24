@@ -115,24 +115,30 @@ public class CDeclParser
 	private ParsedType ReadType()
 	{
 		var tokens = new List<Token>();
-		var firstToken = _lexer.Next();
 
-		if (firstToken.TokenType == TokenType.VolatileKeyword)
+		if (_lexer.PeekNext().TokenType == TokenType.VolatileKeyword)
 		{
-			firstToken = _lexer.Next();
+			_ = _lexer.Next(TokenType.VolatileKeyword);
 		}
 
-		tokens.Add(firstToken);
-
-		if (firstToken.TokenType == TokenType.ConstKeyword)
+		if (_lexer.PeekNext().TokenType == TokenType.ConstKeyword)
 		{
+			tokens.Add(_lexer.Next(TokenType.ConstKeyword));
 			tokens.AddRange(ReadPointers());
-			tokens.Add(_lexer.Next(TokenType.Identifier));
+		}
+
+		var identifiers = ReadIdentifier();
+		tokens.AddRange(identifiers);
+		tokens.AddRange(ReadPointers());
+
+		if (_lexer.PeekNext().TokenType == TokenType.ConstKeyword)
+		{
+			tokens.Add(_lexer.Next(TokenType.ConstKeyword));
 			tokens.AddRange(ReadPointers());
 		}
 		else
 		{
-			if (firstToken.Text == "unsigned" && _lexer.PeekNext().Text == "int") tokens.Add(_lexer.Next());
+			if (identifiers.Last().Text == "unsigned" && _lexer.PeekNext().Text == "int") tokens.Add(_lexer.Next());
 			else if (_lexer.PeekNext().Text == "double") tokens.Add(_lexer.Next());
 
 			tokens.AddRange(ReadPointers());
@@ -145,6 +151,24 @@ public class CDeclParser
 		}
 
 		return new ParsedType() { Tokens = tokens };
+	}
+
+	private List<Token> ReadIdentifier()
+	{
+		var tokens = new List<Token>();
+		tokens.Add(_lexer.Next(TokenType.Identifier));
+
+		while (_lexer.PeekNext().TokenType == TokenType.Period)
+		{
+			_lexer.Next(TokenType.Period);
+
+			if (_lexer.PeekNext().TokenType == TokenType.Identifier)
+			{
+				tokens.Add(_lexer.Next(TokenType.Identifier));
+			}
+		}
+
+		return tokens.TakeLast(1).ToList();
 	}
 
 	private List<Token> ReadPointers()

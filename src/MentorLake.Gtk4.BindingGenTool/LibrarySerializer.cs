@@ -99,7 +99,7 @@ public static class LibrarySerializer
 
 			output.AppendLine($"public static class {s.Name}HandleExtensions");
 			output.AppendLine("{");
-			foreach (var m in s.Methods) output.AppendLine(m.ToAdaptorMethod(s.Name, libraries));
+			foreach (var m in s.Methods) output.AppendLine(m.ToInstanceMethodAdaptor(s.Name, libraries));
 			output.AppendLine("}");
 			output.AppendLine();
 			output.AppendLine($"internal class {s.Name}Externs");
@@ -147,15 +147,8 @@ public static class LibrarySerializer
 			}
 			output.AppendLine();
 			output.AppendLine("{");
-
-			foreach (var m in c.Constructors)
-			{
-				output.AppendLine($"\tpublic static {c.Name}Handle {m.Name.ToPascalCase().Replace(c.Name, "")}({string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)))})");
-				output.AppendLine("\t{");
-				output.AppendLine($"\t\treturn {c.Name}Externs.{m.Name}({string.Join(", ", m.Parameters.Select(p => p.ToCSharpArgument(libraries)))});");
-				output.AppendLine("\t}");
-			}
-
+			foreach (var m in c.Constructors) output.AppendLine(m.ToConstructorAdaptor(c.Name, libraries));
+			foreach (var m in c.Functions) output.AppendLine(m.ToStaticClassMethodAdaptor(c.Name, libraries));
 			output.AppendLine("}");
 			output.AppendLine();
 
@@ -167,17 +160,16 @@ public static class LibrarySerializer
 				output.AppendLine($"\tpublic {c.Name}Signal(string value) => Value = value;");
 				output.AppendLine("}");
 				output.AppendLine();
+				output.AppendLine($"public static class {c.Name}Signals");
+				output.AppendLine("{");
+				foreach (var s in c.Signals) output.AppendLine($"\tpublic static {c.Name}Signal {s.ToPascalCase()} = new(\"{s}\");");
+				output.AppendLine("}");
+				output.AppendLine();
 			}
-
-			output.AppendLine($"public static class {c.Name}Signals");
-			output.AppendLine("{");
-			foreach (var s in c.Signals) output.AppendLine($"\tpublic static {c.Name}Signal {s.ToPascalCase()} = new(\"{s}\");");
-			output.AppendLine("}");
-			output.AppendLine();
 
 			output.AppendLine($"public static class {c.Name}HandleExtensions");
 			output.AppendLine("{");
-			foreach (var m in c.Methods.Concat(classFunctions).DistinctBy(m => m.Name)) output.AppendLine(m.ToAdaptorMethod(c.Name, libraries));
+			foreach (var m in c.Methods.Concat(classFunctions).DistinctBy(m => m.Name)) output.AppendLine(m.ToInstanceMethodAdaptor(c.Name, libraries));
 
 			if (c.Signals.Any())
 			{
@@ -193,16 +185,17 @@ public static class LibrarySerializer
 			output.AppendLine($"internal class {c.Name}Externs");
 			output.AppendLine("{");
 
-			foreach (var m in c.Methods.Concat(classFunctions).DistinctBy(m => m.Name))
+			foreach (var m in c.Constructors)
+			{
+				var parameters = string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)));
+				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
+				output.AppendLine($"\tinternal static extern {c.Name}Handle {m.Name}({parameters});");
+			}
+
+			foreach (var m in c.Methods.Concat(classFunctions).Concat(c.Functions).DistinctBy(m => m.Name))
 			{
 				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
 				output.AppendLine($"\tinternal static extern {m.ToCSharpDecl(libraries)};");
-			}
-
-			foreach (var m in c.Constructors)
-			{
-				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-				output.AppendLine($"\tinternal static extern {c.Name}Handle {m.Name}({string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)))});");
 			}
 
 			output.AppendLine("}");

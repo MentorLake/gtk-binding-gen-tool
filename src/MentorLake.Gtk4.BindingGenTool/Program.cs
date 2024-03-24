@@ -17,7 +17,7 @@ public static class Program
 
 	private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 	private static readonly string LibraryDocsDirectory = Path.Join(HomeFolder, "Downloads/public");
-	private static readonly string OutputBaseDirectory = Path.Join(HomeFolder, "Projects/MentorLake.Gtk4.Temp/src/MentorLake.Gtk4");
+	private static readonly string OutputBaseDirectory = Path.Join(HomeFolder, "Projects/MentorLake.Gtk4/src/MentorLake.Gtk4");
 
 	public static async Task Main()
 	{
@@ -98,14 +98,12 @@ public static class Program
 		}
 
 		Console.WriteLine("Writing...");
-		var tasks = new List<Task>();
 
 		foreach (var lib in parsedLibraries)
 		{
-			tasks.Add(Task.Run(() => LibrarySerializer.WriteAllFiles(OutputBaseDirectory, Configs, lib, parsedLibraries)));
+			LibrarySerializer.WriteAllFiles(OutputBaseDirectory, Configs, lib, parsedLibraries);
 		}
 
-		Task.WaitAll(tasks.ToArray());
 		Console.WriteLine("Done");
 	}
 }
