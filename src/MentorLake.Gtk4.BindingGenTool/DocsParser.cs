@@ -73,9 +73,9 @@ public class DocsParser
 				.Select(x => ParseMethodHtml(x))
 				.Where(x => x != null)
 				.ToList(),
-			Interfaces = classDefLines[1].Contains("implements ")
-				? classDefLines[1].Trim().Replace("implements ", "").Replace(" {", "").Split(", ").ToList()
-				: new List<string>(),
+			Interfaces = xml.XPathSelectElements("body//h4[@id='implements']/..//div[@class='docblock']//a")
+				.Select(a => a.Value)
+				.ToList(),
 			Signals = xml
 				.XPathSelectElements("body//h4[contains(text(), 'Signals')]/../div[@class='docblock']//a")
 				.Select(a => a.Attribute("href").Value)
