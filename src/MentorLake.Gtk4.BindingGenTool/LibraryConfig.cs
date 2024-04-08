@@ -6,4 +6,5 @@ public class LibraryConfig
 	public string DirectoryName { get; set; }
 	public string DeclPrefix { get; set; }
 	public List<string> TypesToSkip { get; set; } = new();
+	public string SourceNamespace { get; set; }
 }

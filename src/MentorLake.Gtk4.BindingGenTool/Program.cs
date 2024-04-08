@@ -4,15 +4,15 @@ public static class Program
 {
 	private static List<LibraryConfig> Configs = new()
 	{
-		new() { Namespace = "GLib", DirectoryName = "glib", DeclPrefix = "G" },
-		new() { Namespace = "GObject", DirectoryName = "gobject", DeclPrefix = "G", TypesToSkip = { "IOCondition" }},
-		new() { Namespace = "Gio", DirectoryName = "gio", DeclPrefix = "G" },
-		new() { Namespace = "GModule", DirectoryName = "gmodule", DeclPrefix = "G" },
-		new() { Namespace = "Pango", DirectoryName = "Pango", DeclPrefix = "Pango" },
-		new() { Namespace = "GdkPixbuf", DirectoryName = "gdk-pixbuf", DeclPrefix = "Gdk" },
-		new() { Namespace = "Gdk4", DirectoryName = "gdk4", DeclPrefix = "Gdk" },
-		new() { Namespace = "Gsk4", DirectoryName = "gsk4", DeclPrefix = "Gsk" },
-		new() { Namespace = "Gtk4", DirectoryName = "gtk4", DeclPrefix = "Gtk" }
+		new() { Namespace = "GLib", DirectoryName = "glib", DeclPrefix = "G", SourceNamespace = "GLib" },
+		new() { Namespace = "GObject", DirectoryName = "gobject", DeclPrefix = "G", TypesToSkip = { "IOCondition" }, SourceNamespace = "GObject"},
+		new() { Namespace = "Gio", DirectoryName = "gio", DeclPrefix = "G", SourceNamespace = "Gio" },
+		new() { Namespace = "GModule", DirectoryName = "gmodule", DeclPrefix = "G", SourceNamespace = "GModule" },
+		new() { Namespace = "Pango", DirectoryName = "Pango", DeclPrefix = "Pango", SourceNamespace = "Pango" },
+		new() { Namespace = "GdkPixbuf", DirectoryName = "gdk-pixbuf", DeclPrefix = "Gdk", SourceNamespace = "GdkPixbuf" },
+		new() { Namespace = "Gdk4", DirectoryName = "gdk4", DeclPrefix = "Gdk", SourceNamespace = "Gdk" },
+		new() { Namespace = "Gsk4", DirectoryName = "gsk4", DeclPrefix = "Gsk", SourceNamespace = "Gsk" },
+		new() { Namespace = "Gtk4", DirectoryName = "gtk4", DeclPrefix = "Gtk", SourceNamespace = "Gtk" }
 	};
 
 	private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

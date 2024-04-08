@@ -92,7 +92,7 @@ public static class LibrarySerializer
 			var output = new StringBuilder();
 			output.AppendLine(header);
 			output.AppendLine();
-			output.AppendLine($"public class {s.Name}Handle {(!string.IsNullOrEmpty(s.ParentClassName) ? $" : {s.ParentClassName}Handle" : "" )}");
+			output.AppendLine($"public interface {s.Name}Handle");
 			output.AppendLine("{");
 			output.AppendLine("}");
 			output.AppendLine();
@@ -145,6 +145,30 @@ public static class LibrarySerializer
 					output.Append(" : " + c.ParentClassName + "Handle");
 				}
 			}
+
+			if (c.Interfaces.Any())
+			{
+				var interfaces = c.Interfaces
+					.Select(i =>
+					{
+						if (i.Contains("."))
+						{
+							var parts = i.Split(".");
+							var libName = parts[0].Trim();
+							var matchingLibraryConfig = allConfigs.FirstOrDefault(l => l.SourceNamespace == libName);
+							return matchingLibraryConfig.DeclPrefix + parts[1].Trim();
+						}
+
+						return i;
+					})
+					.Select(i => i + "Handle")
+					.ToList();
+
+				if (string.IsNullOrEmpty(c.ParentClassName)) output.Append(" : ");
+				else output.Append(", ");
+				output.Append(string.Join(", ", interfaces));
+			}
+
 			output.AppendLine();
 			output.AppendLine("{");
 			foreach (var m in c.Constructors) output.AppendLine(m.ToConstructorAdaptor(c.Name, libraries));
