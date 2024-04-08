@@ -44,6 +44,23 @@ public static class LibrarySerializer
 			output.AppendLine();
 			output.AppendLine($"public class {s.Name}Handle : BaseSafeHandle");
 			output.AppendLine("{");
+
+			foreach (var constructor in s.Constructors)
+			{
+				output.AppendLine(constructor.ToConstructorAdaptor(s.Name, libraries));
+			}
+			output.AppendLine("}");
+			output.AppendLine();
+			output.AppendLine($"internal class {s.Name}Externs");
+			output.AppendLine("{");
+
+			foreach (var m in s.Constructors)
+			{
+				var parameters = string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)));
+				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
+				output.AppendLine($"\tinternal static extern {s.Name}Handle {m.Name}({parameters});");
+			}
+
 			output.AppendLine("}");
 			output.AppendLine();
 			output.Append($"public struct {s.Name}");

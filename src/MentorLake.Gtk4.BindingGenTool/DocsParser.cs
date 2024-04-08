@@ -11,6 +11,7 @@ public class DocsParser
 	public static MethodDeclaration ParseMethodHtml(string methodFilePath)
 	{
 		if (methodFilePath.Contains("https://"))  return null;
+		if (methodFilePath.Contains("ftp:/"))  return null;
 		var xml = LoadHtml(methodFilePath);
 		if (xml.XPathSelectElement("body//h3[contains(text(), 'Function Macro')]") != null) return null;
 		var decl = xml.XPathSelectElement("body//h4[contains(text(), 'Declaration')]/..//div[contains(@class, 'docblock')]").Value;
@@ -123,6 +124,15 @@ public class DocsParser
 		var parser = new CDeclParser(new CDeclLexer(xml.XPathSelectElement("body//section/summary//pre/code").Value));
 		var decl = parser.ReadStructDeclaration();
 		var parameterComments = xml.XPathSelectElement("body//h6[contains(text(), 'Structure members')]/..//div[@class='docblock']");
+		var structDirectory = Path.GetDirectoryName(filePath);
+
+		decl.Constructors = xml
+			.XPathSelectElements("body//h4[@id='constructors']/..//div[@class='docblock']//a")
+			.Select(a => a.Attribute("href").Value)
+			.Select(x => Path.Join(structDirectory, x))
+			.Select(x => ParseMethodHtml(x))
+			.Where(x => x != null)
+			.ToList();
 
 		foreach (var p in decl.Properties)
 		{
