@@ -5,6 +5,8 @@ namespace BindingTransform;
 
 public class MethodDeclaration
 {
+	public const string CustomStringMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(NoNativeFreeStringMarshaller))]";
+
 	public ParsedType ReturnType { get; set; }
 	public string ReturnTypeComments { get; set; } = "";
 	public string Name { get; set; }
@@ -14,6 +16,8 @@ public class MethodDeclaration
 	{
 		return $"{ToCSharpReturnType()} {Name}({string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)))})";
 	}
+
+	public bool IsReturnDataOwnedByInstance => ReturnTypeComments.Contains("The returned data is owned by the instance");
 
 	public string ToCSharpReturnType()
 	{
@@ -39,6 +43,25 @@ public class MethodDeclaration
 	private bool IsArrayReturnType()
 	{
 		return ReturnTypeComments.Contains("An array of");
+	}
+
+	public string ToExternDefinition(string libraryName, List<LibraryDeclaration> libraries)
+	{
+		var output = new StringBuilder();
+		output.AppendLine($"\t[DllImport(Libraries.{libraryName})]");
+		if (IsReturnDataOwnedByInstance && ToCSharpReturnType() == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
+		output.AppendLine($"\tinternal static extern {ToCSharpDecl(libraries)};");
+		return output.ToString();
+	}
+
+	public string ToExternConstructorDefinition(string libraryName, string typeName, List<LibraryDeclaration> libraries)
+	{
+		var output = new StringBuilder();
+		var parameters = string.Join(", ", Parameters.Select(a => a.ToCSharpString(libraries)));
+		output.AppendLine($"\t[DllImport(Libraries.{libraryName})]");
+		if (IsReturnDataOwnedByInstance && ToCSharpReturnType() == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
+		output.AppendLine($"\tinternal static extern {typeName}Handle {Name}({parameters});");
+		return output.ToString();
 	}
 
 	public string ToConstructorAdaptor(string className, List<LibraryDeclaration> libraries)

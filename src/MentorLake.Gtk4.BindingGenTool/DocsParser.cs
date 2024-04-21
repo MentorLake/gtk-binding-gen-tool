@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -16,7 +15,7 @@ public class DocsParser
 		if (xml.XPathSelectElement("body//h3[contains(text(), 'Function Macro')]") != null) return null;
 		var decl = xml.XPathSelectElement("body//h4[contains(text(), 'Declaration')]/..//div[contains(@class, 'docblock')]").Value;
 		var parameterComments = xml.XPathSelectElement("body//h4[contains(text(), 'Parameters')]/..//dl[@class='arguments']");
-		var returnTypeComments = xml.XPathSelectElement("body//h4[contains(text(), 'Return value')]/..//div[@class='arg-description']")?.Value ?? "";
+		var returnTypeComments = xml.XPathSelectElement("body//h4[contains(text(), 'Return value')]/..//div[@class='returns']")?.Value ?? "";
 		var parser = new CDeclParser(new CDeclLexer(decl));
 		var methodDecl = parser.ReadMethodDeclaration();
 		methodDecl.ReturnTypeComments = returnTypeComments;

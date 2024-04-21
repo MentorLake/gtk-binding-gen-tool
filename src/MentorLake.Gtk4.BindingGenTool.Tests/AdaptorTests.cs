@@ -53,7 +53,6 @@ public class AdaptorTests
 	}
 ";
 
-		Console.WriteLine(adaptorMethod);
 		Assert.AreEqual(expectedOutput, adaptorMethod);
 	}
 }

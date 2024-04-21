@@ -56,9 +56,7 @@ public static class LibrarySerializer
 
 			foreach (var m in s.Constructors)
 			{
-				var parameters = string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)));
-				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-				output.AppendLine($"\tinternal static extern {s.Name}Handle {m.Name}({parameters});");
+				output.AppendLine(m.ToExternConstructorDefinition(libraryDeclaration.Name, s.Name, libraries));
 			}
 
 			output.AppendLine("}");
@@ -124,8 +122,7 @@ public static class LibrarySerializer
 
 			foreach (var m in s.Methods)
 			{
-				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-				output.AppendLine($"\tinternal static extern {m.ToCSharpDecl(libraries)};");
+				output.AppendLine(m.ToExternDefinition(libraryDeclaration.Name, libraries));
 			}
 
 			output.AppendLine("}");
@@ -257,15 +254,12 @@ public static class LibrarySerializer
 
 			foreach (var m in c.Constructors)
 			{
-				var parameters = string.Join(", ", m.Parameters.Select(a => a.ToCSharpString(libraries)));
-				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-				output.AppendLine($"\tinternal static extern {c.Name}Handle {m.Name}({parameters});");
+				output.AppendLine(m.ToExternConstructorDefinition(libraryDeclaration.Name, c.Name, libraries));
 			}
 
 			foreach (var m in c.Methods.Concat(classFunctions).Concat(c.Functions).DistinctBy(m => m.Name))
 			{
-				output.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-				output.AppendLine($"\tinternal static extern {m.ToCSharpDecl(libraries)};");
+				output.AppendLine(m.ToExternDefinition(libraryDeclaration.Name, libraries));
 			}
 
 			output.AppendLine("}");
@@ -280,8 +274,7 @@ public static class LibrarySerializer
 
 		foreach (var f in allGlobalFunctions)
 		{
-			globalFunctionsOutput.AppendLine($"\t[DllImport(Libraries.{libraryDeclaration.Name})]");
-			globalFunctionsOutput.AppendLine($"\tinternal static extern {f.ToCSharpDecl(libraries)};");
+			globalFunctionsOutput.AppendLine(f.ToExternDefinition(libraryDeclaration.Name, libraries));
 		}
 
 		globalFunctionsOutput.AppendLine("}");
