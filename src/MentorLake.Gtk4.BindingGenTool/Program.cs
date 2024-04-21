@@ -28,6 +28,7 @@ public static class Program
 			Console.WriteLine(libraryConfig.Namespace);
 
 			var libraryDeclaration = new LibraryDeclaration();
+			libraryDeclaration.Config = libraryConfig;
 			libraryDeclaration.Name = libraryConfig.Namespace;
 			parsedLibraries.Add(libraryDeclaration);
 

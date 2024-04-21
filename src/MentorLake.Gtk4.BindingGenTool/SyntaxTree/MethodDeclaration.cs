@@ -19,6 +19,7 @@ public class MethodDeclaration
 	{
 		var returnType = ReturnType.ToCString();
 		returnType = returnType.ConvertToBuiltInTypes();
+		if (returnType.Contains(".")) returnType = "G" + returnType.Split(".").Last();
 		var isBuiltInType = StringExtensions.Keywords.Contains(returnType.Replace("[]", "").TrimEnd('*'));
 
 		if (IsArrayReturnType()) returnType = returnType.ToArrayType();

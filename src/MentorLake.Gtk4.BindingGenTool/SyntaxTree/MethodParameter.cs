@@ -20,6 +20,12 @@ public class MethodParameter
 		var paramType = Type.ToCString().ConvertToBuiltInTypes();
 		var isBuiltInType = StringExtensions.Keywords.Contains(paramType.Replace("[]", "").TrimEnd('*').Replace("const ", ""));
 
+		if (paramType.Contains("."))
+		{
+			var library = libraries.First(l => l.Name == paramType.Split(".").First());
+			paramType =  library.Config.DeclPrefix + paramType.Split(".").Last();
+		}
+
 		if (IsOutParameter()) paramType = "out " + Regex.Replace(paramType, @"^(.+)\*$", "$1");
 		if (IsArray()) paramType = paramType.ToArrayType();
 

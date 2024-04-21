@@ -203,7 +203,7 @@ public static class LibrarySerializer
 				output.AppendLine();
 				output.AppendLine($"public static class {c.Name}Signals");
 				output.AppendLine("{");
-				foreach (var s in c.Signals) output.AppendLine($"\tpublic static {c.Name}Signal {s.ToPascalCase()} = new(\"{s}\");");
+				foreach (var s in c.Signals) output.AppendLine($"\tpublic static {c.Name}Signal {s.Name.ToPascalCase()} = new(\"{s}\");");
 				output.AppendLine("}");
 				output.AppendLine();
 			}
@@ -214,14 +214,43 @@ public static class LibrarySerializer
 
 			if (c.Signals.Any())
 			{
-				output.AppendLine($"\tpublic static {c.Name}Handle Connect(this {c.Name}Handle instance, {c.Name}Signal signal, GCallback c_handler)");
-				output.AppendLine("\t{");
-				output.AppendLine("\t\tGObjectExterns.g_signal_connect_data(instance, signal.Value, c_handler, IntPtr.Zero, null, GConnectFlags.G_CONNECT_AFTER);");
-				output.AppendLine("\t\treturn instance;");
-				output.AppendLine("\t}");
+				foreach (var signal in c.Signals)
+				{
+					output.AppendLine($"\tpublic static {c.Name}Handle Signal_{signal.Name.ToPascalCase()}(this {c.Name}Handle instance, {c.Name}Delegates.{signal.Name.ToPascalCase()} handler)");
+					output.AppendLine("\t{");
+					output.AppendLine($"\t\tGObjectExterns.g_signal_connect_data(instance, \"{signal.Name}\", Marshal.GetFunctionPointerForDelegate(handler), IntPtr.Zero, null, GConnectFlags.G_CONNECT_AFTER);");
+					output.AppendLine("\t\treturn instance;");
+					output.AppendLine("\t}");
+				}
 			}
 
 			output.AppendLine("}");
+
+			if (c.Signals.Any())
+			{
+				output.AppendLine();
+				output.AppendLine($"public static class {c.Name}Delegates");
+				output.AppendLine("{");
+
+				foreach (var s in c.Signals)
+				{
+					var parameters = string.Join(", ", s.Parameters.Select(a => a.ToCSharpString(libraries)));
+					if (s.Parameters.Any())
+					{
+						var customMarshaller = $"[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{c.Name}Handle>))]";
+						var firstParam = customMarshaller + " " + s.Parameters.First().ToCSharpString(libraries);
+						parameters = string.Join(", ", new[] { firstParam }.Concat(s.Parameters.Skip(1).Select(a => a.ToCSharpString(libraries))));
+					}
+
+					var decl = $"{s.ToCSharpReturnType()} {s.Name.ToPascalCase()}({parameters})";
+					output.AppendLine();
+					output.AppendLine("\t[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
+					output.AppendLine($"\tpublic delegate {decl};");
+				}
+
+				output.AppendLine("}");
+			}
+
 			output.AppendLine();
 			output.AppendLine($"internal class {c.Name}Externs");
 			output.AppendLine("{");

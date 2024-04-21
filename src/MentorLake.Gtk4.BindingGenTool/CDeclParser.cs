@@ -160,7 +160,7 @@ public class CDeclParser
 
 		while (_lexer.PeekNext().TokenType == TokenType.Period)
 		{
-			_lexer.Next(TokenType.Period);
+			tokens.Add(_lexer.Next(TokenType.Period));
 
 			if (_lexer.PeekNext().TokenType == TokenType.Identifier)
 			{
@@ -168,7 +168,7 @@ public class CDeclParser
 			}
 		}
 
-		return tokens.TakeLast(1).ToList();
+		return tokens;
 	}
 
 	private List<Token> ReadPointers()

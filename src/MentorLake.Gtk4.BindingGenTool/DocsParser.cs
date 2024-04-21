@@ -79,7 +79,9 @@ public class DocsParser
 			Signals = xml
 				.XPathSelectElements("body//h4[contains(text(), 'Signals')]/../div[@class='docblock']//a")
 				.Select(a => a.Attribute("href").Value)
-				.Select(x => Regex.Replace(x, @"^.*\.([^\.]+)\.html", "$1"))
+				.Select(x => Path.Join(classDirectory, x))
+				.Select(x => ParseMethodHtml(x))
+				.Where(x => x != null)
 				.ToList(),
 			Functions = xml
 				.XPathSelectElements("body//h4[contains(text(), 'Functions')]/../div[@class='docblock']/div//a")

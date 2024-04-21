@@ -13,4 +13,5 @@ public class LibraryDeclaration
 	public List<StructDeclaration> Unions { get; set; }
 	public List<MethodDeclaration> Functions { get; set; }
 	public List<InterfaceDeclaration> Interfaces { get; set; }
+	public LibraryConfig Config { get; set; }
 }

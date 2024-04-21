@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace BindingTransform;
 
@@ -10,33 +9,40 @@ public class ParsedType
 	public string ToCString()
 	{
 		var output = new StringBuilder();
-		IEnumerable<Token> remainingTokens = Tokens;
+		var tokenQueue = new Queue<Token>();
+		Tokens.ForEach(tokenQueue.Enqueue);
 
-		if (Tokens.First().TokenType == TokenType.ConstKeyword)
+		if (tokenQueue.Peek().TokenType == TokenType.ConstKeyword)
 		{
-			remainingTokens = remainingTokens.Skip(1);
-			var pointerTokens = remainingTokens.TakeWhile(t => t.TokenType == TokenType.Star).Select(t => "*").ToList();
-			remainingTokens = remainingTokens.Skip(pointerTokens.Count);
-
+			tokenQueue.Dequeue();
+			var pointerTokens = new List<Token>();
+			while (tokenQueue.Peek().TokenType == TokenType.Star) pointerTokens.Add(tokenQueue.Dequeue());
 			output.Append("const");
 			output.Append(string.Join("", pointerTokens));
 			output.Append(" ");
 		}
 
-		var name = remainingTokens.First();
-		remainingTokens = remainingTokens.Skip(1);
+		var name = tokenQueue.Dequeue();
 
-		if (name.Text == "long" &&  remainingTokens.Any() && remainingTokens.First().Text == "double")
+		if (name.Text == "long" &&  tokenQueue.Any() && tokenQueue.Peek().Text == "double")
 		{
 			output.Append("decimal");
-			remainingTokens = remainingTokens.Skip(2);
+			tokenQueue.Dequeue();
 		}
 		else
 		{
 			output.Append(name.Text);
+
+			while (tokenQueue.Any() && tokenQueue.Peek().TokenType == TokenType.Period)
+			{
+				output.Append(tokenQueue.Dequeue().Text);
+				if (tokenQueue.Peek().TokenType == TokenType.Identifier) output.Append(tokenQueue.Dequeue().Text);
+			}
 		}
 
-		output.Append(string.Join("", remainingTokens.TakeWhile(t => t.TokenType == TokenType.Star).Select(t => "*").ToList()));
+		var remainingPointers = new List<string>();
+		while (tokenQueue.Any() && tokenQueue.Peek().TokenType == TokenType.Star) remainingPointers.Add(tokenQueue.Dequeue().Text);
+		output.Append(string.Join("", remainingPointers));
 		return output.ToString();
 	}
 }

@@ -70,6 +70,7 @@ public static class StringExtensions
 		if (Regex.Match(name, @"^GObjectTypeInstance").Success) return "GTypeInstanceHandle";
 		if (Regex.Match(name, @"^GObjectTypeClass").Success) return "GTypeClassHandle";
 		if (Regex.Match(name, @"^GObjectTypeInterface").Success) return "GTypeInterfaceHandle";
+		if (Regex.Match(name, @"^GCallback").Success) return "IntPtr";
 
 		return name;
 	}
