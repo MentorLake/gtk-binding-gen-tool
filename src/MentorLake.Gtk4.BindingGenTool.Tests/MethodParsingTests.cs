@@ -1,4 +1,5 @@
 using BindingTransform;
+using BindingTransform.Serialization.CSharp;
 
 namespace MentorLake.Gtk4.BindingGenTool.Tests;
 

@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Xml.Linq;
+
 namespace BindingTransform;
 
 public static class Program
@@ -18,8 +21,26 @@ public static class Program
 	private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 	private static readonly string LibraryDocsDirectory = Path.Join(HomeFolder, "Downloads/public");
 	private static readonly string OutputBaseDirectory = Path.Join(HomeFolder, "Projects/MentorLake.Gtk4/src/MentorLake.Gtk4");
+	private static string UserDirectory = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+	private static string DocsJsonFilePath = Path.Join(UserDirectory, "docs.json");
 
-	public static async Task Main()
+	public static Task Main()
+	{
+		//ParseDocs();
+		Console.WriteLine("Loading doc JSON...");
+		var parsedLibraries = (List<LibraryDeclaration>) JsonSerializer.Deserialize(File.ReadAllText(DocsJsonFilePath), typeof(List<LibraryDeclaration>));
+
+		foreach (var lib in parsedLibraries)
+		{
+			Console.WriteLine($"Writing {lib.Name}...");
+			LibrarySerializer.WriteAllFiles(OutputBaseDirectory, lib, parsedLibraries);
+		}
+
+		Console.WriteLine("Done");
+		return Task.CompletedTask;
+	}
+
+	private static void ParseDocs()
 	{
 		var parsedLibraries = new List<LibraryDeclaration>();
 
@@ -98,13 +119,25 @@ public static class Program
 				.ToList();
 		}
 
-		Console.WriteLine("Writing...");
-
-		foreach (var lib in parsedLibraries)
+		foreach (var l in parsedLibraries)
 		{
-			LibrarySerializer.WriteAllFiles(OutputBaseDirectory, Configs, lib, parsedLibraries);
+			var allGlobalFunctions = l.Functions.ToList();
+
+			foreach (var c in l.Classes)
+			{
+				var classFunctions = allGlobalFunctions
+					.Where(f => f.Parameters.Any())
+					.Where(f => f.Parameters.First().ToCSharpTypeWithModifiers(parsedLibraries) == c.Name + "Handle")
+					.ToList();
+
+				c.Methods.AddRange(classFunctions);
+				allGlobalFunctions = allGlobalFunctions.Except(classFunctions).ToList();
+			}
+
+			l.Functions = allGlobalFunctions;
 		}
 
-		Console.WriteLine("Done");
+		File.WriteAllBytes(DocsJsonFilePath, JsonSerializer.SerializeToUtf8Bytes(parsedLibraries));
+		Console.WriteLine("Parsing done");
 	}
 }
