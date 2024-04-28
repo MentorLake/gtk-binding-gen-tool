@@ -10,8 +10,13 @@ public class CSharpInterfaceSerializer
 		output.AppendLine($"public interface {s.Name}Handle");
 		output.AppendLine("{");
 		output.AppendLine("}");
-		output.AppendLine();
 
+		output.AppendLine();
+		output.AppendLine($"internal class {s.Name}HandleImpl : BaseSafeHandle, {s.Name}Handle");
+		output.AppendLine("{");
+		output.AppendLine("}");
+
+		output.AppendLine();
 		output.AppendLine($"public static class {s.Name}HandleExtensions");
 		output.AppendLine("{");
 		foreach (var m in s.Methods) output.AppendLine(m.ToInstanceMethodAdaptor(s.Name, libraries));
