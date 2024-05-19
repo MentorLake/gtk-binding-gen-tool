@@ -9,6 +9,11 @@ public static class CSharpParameterSerializer
 		return ToCSharpTypeWithModifiers(m, libraries) + " " + m.ToCSharpParameterName();
 	}
 
+	public static string ToCSharpTypeWithoutModifiers(this MethodParameter m, List<LibraryDeclaration> libraries)
+	{
+		return m.ToCSharpTypeWithModifiers(libraries).Split(" ").Last();
+	}
+
 	public static string ToCSharpTypeWithModifiers(this MethodParameter m, List<LibraryDeclaration> libraries)
 	{
 		if (m.IsVarArgs) return "IntPtr";
@@ -42,22 +47,22 @@ public static class CSharpParameterSerializer
 		return paramType;
 	}
 
-	private static bool IsAlias(this MethodParameter m, string type, List<LibraryDeclaration> libraries)
+	public static bool IsAlias(this MethodParameter m, string type, List<LibraryDeclaration> libraries)
 	{
 		return libraries.SelectMany(l => l.Aliases).Any(e => e.Name == type);
 	}
 
-	private static bool IsEnum(this MethodParameter m, string type, List<LibraryDeclaration> libraries)
+	public static bool IsEnum(this MethodParameter m, string type, List<LibraryDeclaration> libraries)
 	{
 		return libraries.SelectMany(l => l.Enums.Concat(l.Flags).Concat(l.Errors)).Any(e => e.Name == type);
 	}
 
-	private static bool IsArray(this MethodParameter m)
+	public static bool IsArray(this MethodParameter m)
 	{
 		return m.Comments.Contains("An array of");
 	}
 
-	private static bool IsOutParameter(this MethodParameter m)
+	public static bool IsOutParameter(this MethodParameter m)
 	{
 		if (m.Type.ToCString() == "GError**") return true;
 

@@ -12,7 +12,11 @@ public static class LibrarySerializer
 
 		var ns = $"namespace MentorLake.Gtk4.{libraryDeclaration.Name};";
 		var usings = libraries.Select(l => l.Config).Select(l => $"using MentorLake.Gtk4.{l.Namespace};").ToList();
-		var header = $"using MentorLake.Gtk4.Graphene;\nusing MentorLake.Gtk4.Cairo;\nusing MentorLake.Gtk4.Harfbuzz;\nusing System.Runtime.InteropServices;\n{string.Join("\n", usings)}\n\n{ns}";
+		var moreUsings = @"using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;";
+
+		var header = $"using MentorLake.Gtk4.Graphene;\nusing MentorLake.Gtk4.Cairo;\nusing MentorLake.Gtk4.Harfbuzz;\nusing System.Runtime.InteropServices;\n{moreUsings}{string.Join("\n", usings)}\n\n{ns}";
 
 		foreach (var d in libraryDeclaration.Delegates)
 		{
