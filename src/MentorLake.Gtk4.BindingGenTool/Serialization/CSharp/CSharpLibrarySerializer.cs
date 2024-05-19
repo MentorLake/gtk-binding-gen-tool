@@ -10,13 +10,7 @@ public static class LibrarySerializer
 		if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
 		Directory.CreateDirectory(outputDir);
 
-		var ns = $"namespace MentorLake.Gtk4.{libraryDeclaration.Name};";
-		var usings = libraries.Select(l => l.Config).Select(l => $"using MentorLake.Gtk4.{l.Namespace};").ToList();
-		var moreUsings = @"using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;";
-
-		var header = $"using MentorLake.Gtk4.Graphene;\nusing MentorLake.Gtk4.Cairo;\nusing MentorLake.Gtk4.Harfbuzz;\nusing System.Runtime.InteropServices;\n{moreUsings}{string.Join("\n", usings)}\n\n{ns}";
+		var header = $"namespace MentorLake.Gtk4.{libraryDeclaration.Name};";
 
 		foreach (var d in libraryDeclaration.Delegates)
 		{
@@ -70,7 +64,7 @@ using System.Reactive.Linq;";
 		var globalFunctionsOutput = new StringBuilder();
 		globalFunctionsOutput.AppendLine(header);
 		globalFunctionsOutput.AppendLine();
-		globalFunctionsOutput.AppendLine("internal class GlobalFunctionExterns");
+		globalFunctionsOutput.AppendLine($"internal class {libraryDeclaration.Name}GlobalFunctionExterns");
 		globalFunctionsOutput.AppendLine("{");
 
 		foreach (var f in libraryDeclaration.Functions)
@@ -79,6 +73,6 @@ using System.Reactive.Linq;";
 		}
 
 		globalFunctionsOutput.AppendLine("}");
-		File.WriteAllText(Path.Join(outputDir, "GlobalFunctionExterns.cs"), globalFunctionsOutput.ToString());
+		File.WriteAllText(Path.Join(outputDir, $"{libraryDeclaration.Name}GlobalFunctionExterns.cs"), globalFunctionsOutput.ToString());
 	}
 }
