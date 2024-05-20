@@ -19,13 +19,7 @@ public static class CSharpMethodSerializer
 		if (returnType.Contains(".")) returnType = "G" + returnType.Split(".").Last();
 		var isBuiltInType = StringExtensions.Keywords.Contains(returnType.Replace("[]", "").TrimEnd('*'));
 
-		if (IsArrayReturnType(m)) returnType = returnType.ToArrayType();
-
-		if (isBuiltInType)
-		{
-			if (returnType.EndsWith("*")) returnType = returnType.ToArrayType();
-			return returnType;
-		}
+		if (IsArrayReturnType(m) || (isBuiltInType && returnType.EndsWith("*"))) return "IntPtr";
 
 		if (returnType.EndsWith("*")) returnType = returnType.ConvertToHandleType();
 		if (returnType.EndsWith("*") && Regex.Match(returnType, @"^const .*$").Success) returnType = returnType.ToArrayType();

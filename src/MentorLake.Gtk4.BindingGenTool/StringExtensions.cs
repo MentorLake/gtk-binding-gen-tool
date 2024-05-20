@@ -45,8 +45,8 @@ public static class StringExtensions
 		if (TryConvert(name, @"^grefcount", "int", out x)) return x;
 		if (TryConvert(name, @"^goffset", "int", out x)) return x;
 		if (TryConvert(name, @"^(gpointer|gconstpointer)", "IntPtr", out x)) return x;
-		if (TryConvert(name, @"^gss?ize", "int", out x)) return x;
-		if (TryConvert(name, @"^size_t", "int", out x)) return x;
+		if (TryConvert(name, @"^gss?ize", "UIntPtr", out x)) return x;
+		if (TryConvert(name, @"^size_t", "UIntPtr", out x)) return x;
 		if (TryConvert(name, @"^pid_t", "int", out x)) return x;
 		if (TryConvert(name, @"^uid_t", "int", out x)) return x;
 		if (TryConvert(name, @"^FILE\*", "IntPtr", out x)) return x;
@@ -89,7 +89,7 @@ public static class StringExtensions
 		"short", "sizeof", "stackalloc", "static", "string", "struct", "switch",
 		"this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked",
 		"unsafe", "ushort", "using", "using static", "virtual", "void", "volatile",
-		"while", "yield", "IntPtr" };
+		"while", "yield", "IntPtr", "UIntPtr" };
 
 	public static string ToPascalCase(this string s) {
 		var result = new StringBuilder();
