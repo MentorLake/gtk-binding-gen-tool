@@ -9,7 +9,7 @@ public class CSharpDelegateSerializer
 		var output = new StringBuilder();
 		output.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
 		var parameters = string.Join(", ", d.Parameters.Select(a => CreateParameter(a, libraries)));
-		output.AppendLine($"public delegate {d.ToCSharpReturnType()} {d.Name}({parameters});");
+		output.AppendLine($"public delegate {d.ToCSharpReturnType()} {d.Name.NormalizeName()}({parameters});");
 		return output.ToString();
 	}
 

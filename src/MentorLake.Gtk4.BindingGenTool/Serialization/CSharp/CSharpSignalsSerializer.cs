@@ -20,7 +20,7 @@ public class CSharpSignalsSerializer
 	{{
 		return Observable.Create((IObserver<{c.Name}SignalStructs.{signal.Name.ToPascalCase()}Signal> obs) =>
 		{{
-			{c.Name}SignalDelegates.{signal.Name.ToPascalCase()} handler = ({string.Join(", ", signal.Parameters.Select(p => $"{p.ToCSharpTypeWithModifiers(libraries)} {p.ToCSharpParameterName()}"))}) =>
+			{c.Name}SignalDelegates.{signal.Name.NormalizeName()} handler = ({string.Join(", ", signal.Parameters.Select(p => $"{p.ToCSharpTypeWithModifiers(libraries)} {p.ToCSharpParameterName()}"))}) =>
 			{{
 				{outParameterDefaultAssignments}
 
@@ -77,18 +77,8 @@ public class CSharpSignalsSerializer
 
 		foreach (var s in c.Signals)
 		{
-			var parameters = string.Join(", ", s.Parameters.Select(a => a.ToCSharpString(libraries)));
-			if (s.Parameters.Any())
-			{
-				var customMarshaller = $"[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{c.Name}Handle>))]";
-				var firstParam = customMarshaller + " " + s.Parameters.First().ToCSharpString(libraries);
-				parameters = string.Join(", ", new[] { firstParam }.Concat(s.Parameters.Skip(1).Select(a => a.ToCSharpString(libraries))));
-			}
-
-			var decl = $"{s.ToCSharpReturnType()} {s.Name.ToPascalCase()}({parameters})";
 			output.AppendLine();
-			output.AppendLine("\t[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
-			output.AppendLine($"\tpublic delegate {decl};");
+			output.AppendLine(CSharpDelegateSerializer.Serialize(s, libraries));
 		}
 
 		output.AppendLine("}");
