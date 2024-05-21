@@ -59,7 +59,7 @@ public static class CSharpParameterSerializer
 
 	public static bool IsArray(this MethodParameter m)
 	{
-		return m.Comments.Contains("An array of");
+		return m.Comments.Contains("An array of", StringComparison.InvariantCultureIgnoreCase);
 	}
 
 	public static bool IsOutParameter(this MethodParameter m)

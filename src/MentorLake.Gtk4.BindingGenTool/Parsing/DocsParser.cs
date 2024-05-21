@@ -135,6 +135,14 @@ public class DocsParser
 			.Where(x => x != null)
 			.ToList();
 
+		decl.Methods = xml
+			.XPathSelectElements("body//div[@class='toggle-wrapper methods']/h4[contains(text(), 'Instance methods')]/../div[@class='docblock']/div")
+			.Select(m => m.XPathSelectElement(".//a"))
+			.Select(a => a.Attribute("href").Value)
+			.Select(x => Path.Join(structDirectory, x))
+			.Select(x => ParseMethodHtml(x))
+			.ToList();
+
 		foreach (var p in decl.Properties)
 		{
 			p.Comments = parameterComments?.XPathSelectElement($"//dt/code[text()='{p.Name}']/../following-sibling::dd")?.Value ?? "";

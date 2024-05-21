@@ -12,6 +12,12 @@ public static class CSharpAliasSerializer
 		output.AppendLine("{");
 		if (s.Type.ToCString() != "void") output.AppendLine($"\tpublic {s.ToCSharpType()} Value;");
 		output.AppendLine("}");
+
+		output.AppendLine();
+		output.AppendLine($"public class {s.Name}Handle : BaseSafeHandle");
+		output.AppendLine("{");
+		output.AppendLine("}");
+
 		return output.ToString();
 	}
 

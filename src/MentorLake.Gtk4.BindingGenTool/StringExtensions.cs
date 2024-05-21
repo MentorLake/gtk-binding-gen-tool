@@ -47,8 +47,10 @@ public static class StringExtensions
 		if (TryConvert(name, @"^(gpointer|gconstpointer)", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^gss?ize", "UIntPtr", out x)) return x;
 		if (TryConvert(name, @"^size_t", "UIntPtr", out x)) return x;
+		if (TryConvert(name, @"^time_t", "long", out x)) return x;
 		if (TryConvert(name, @"^pid_t", "int", out x)) return x;
 		if (TryConvert(name, @"^uid_t", "int", out x)) return x;
+		if (TryConvert(name, @"^tm\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^FILE\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^passwd\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^utimbuf\*", "IntPtr", out x)) return x;

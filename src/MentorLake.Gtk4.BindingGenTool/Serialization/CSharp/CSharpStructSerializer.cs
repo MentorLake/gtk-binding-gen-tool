@@ -13,9 +13,16 @@ public static class CSharpStructSerializer
 		output.AppendLine("}");
 		output.AppendLine();
 
+		output.AppendLine();
+		output.AppendLine($"public static class {s.Name}HandleExtensions");
+		output.AppendLine("{");
+		foreach (var m in s.Methods.DistinctBy(m => m.Name)) output.AppendLine(m.ToInstanceMethodAdaptor(s.Name, libraries));
+		output.AppendLine("}");
+
 		output.AppendLine($"internal class {s.Name}Externs");
 		output.AppendLine("{");
 		foreach (var m in s.Constructors) output.AppendLine(m.ToExternConstructorDefinition(libraryDeclaration.Name, s.Name, libraries));
+		foreach (var m in s.Methods) output.AppendLine(m.ToExternDefinition(libraryDeclaration.Name, libraries));
 		output.AppendLine("}");
 		output.AppendLine();
 
