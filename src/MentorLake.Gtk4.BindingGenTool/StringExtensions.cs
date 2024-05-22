@@ -52,6 +52,12 @@ public static class StringExtensions
 		if (TryConvert(name, @"^uid_t", "int", out x)) return x;
 		if (TryConvert(name, @"^tm\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^FILE\*", "IntPtr", out x)) return x;
+		if (TryConvert(name, @"^Screen\*", "IntPtr", out x)) return x;
+		if (TryConvert(name, @"^Display\*", "IntPtr", out x)) return x;
+		if (TryConvert(name, @"^Window", "IntPtr", out x)) return x;
+		if (TryConvert(name, @"^Cursor", "IntPtr", out x)) return x;
+		if (TryConvert(name, @"^XID", "ulong", out x)) return x;
+		if (TryConvert(name, @"^Atom", "ulong", out x)) return x;
 		if (TryConvert(name, @"^passwd\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^utimbuf\*", "IntPtr", out x)) return x;
 		if (TryConvert(name, @"^gatomicrefcount", "int", out x)) return x;

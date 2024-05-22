@@ -15,7 +15,8 @@ public static class Program
 		new() { Namespace = "GdkPixbuf", DirectoryName = "gdk-pixbuf", DeclPrefix = "Gdk", SourceNamespace = "GdkPixbuf" },
 		new() { Namespace = "Gdk4", DirectoryName = "gdk4", DeclPrefix = "Gdk", SourceNamespace = "Gdk" },
 		new() { Namespace = "Gsk4", DirectoryName = "gsk4", DeclPrefix = "Gsk", SourceNamespace = "Gsk" },
-		new() { Namespace = "Gtk4", DirectoryName = "gtk4", DeclPrefix = "Gtk", SourceNamespace = "Gtk" }
+		new() { Namespace = "Gtk4", DirectoryName = "gtk4", DeclPrefix = "Gtk", SourceNamespace = "Gtk" },
+		new() { Namespace = "Gdk4X11", DirectoryName = "gdk4-x11", DeclPrefix = "Gdk", SourceNamespace = "GdkX11" }
 	};
 
 	private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -26,7 +27,7 @@ public static class Program
 
 	public static Task Main()
 	{
-		//ParseDocs();
+		ParseDocs();
 		Console.WriteLine("Loading doc JSON...");
 		var parsedLibraries = (List<LibraryDeclaration>) JsonSerializer.Deserialize(File.ReadAllText(DocsJsonFilePath), typeof(List<LibraryDeclaration>));
 
