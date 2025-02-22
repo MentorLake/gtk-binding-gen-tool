@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<repository
+	xmlns="http://www.gtk.org/introspection/core/1.0"
+	xmlns:c="http://www.gtk.org/introspection/c/1.0"
+	xmlns:glib="http://www.gtk.org/introspection/glib/1.0" version="1.2">
+	<include name="GLib" version="2.0"/>
+	<package name="gobject-2.0"/>
+	<namespace name="GObject" version="2.0" shared-library="libgobject-2.0.so.0" c:identifier-prefixes="G" c:symbol-prefixes="gobject,g">
+
+		<bitfield name="AnchorHints" version="3.22" stability="Unstable" glib:type-name="GdkAnchorHints" glib:get-type="gdk_anchor_hints_get_type" c:type="GdkAnchorHints">
+			<member name="flip_x" value="1" c:identifier="GDK_ANCHOR_FLIP_X" glib:nick="flip-x" glib:name="GDK_ANCHOR_FLIP_X"/>
+			<member name="flip_y" value="2" c:identifier="GDK_ANCHOR_FLIP_Y" glib:nick="flip-y" glib:name="GDK_ANCHOR_FLIP_Y"/>
+			<member name="slide_x" value="4" c:identifier="GDK_ANCHOR_SLIDE_X" glib:nick="slide-x" glib:name="GDK_ANCHOR_SLIDE_X"/>
+		</bitfield>
+
+		<class name="AppLaunchContext" c:symbol-prefix="app_launch_context" c:type="GdkAppLaunchContext" parent="Gio.AppLaunchContext" glib:type-name="GdkAppLaunchContext" glib:get-type="gdk_app_launch_context_get_type">
+			<constructor name="new" c:identifier="gdk_app_launch_context_new" version="2.14" deprecated="1" deprecated-version="3.0">
+				<return-value transfer-ownership="full">
+					<type name="AppLaunchContext" c:type="GdkAppLaunchContext*"/>
+				</return-value>
+			</constructor>
+			<method name="set_desktop" c:identifier="gdk_app_launch_context_set_desktop" version="2.14">
+				<return-value transfer-ownership="none">
+					<type name="none" c:type="void"/>
+				</return-value>
+				<parameters>
+					<instance-parameter name="context" transfer-ownership="none">
+						<type name="AppLaunchContext" c:type="GdkAppLaunchContext*"/>
+					</instance-parameter>
+					<parameter name="desktop" transfer-ownership="none">
+						<type name="gint" c:type="gint"/>
+					</parameter>
+				</parameters>
+			</method>
+			<property name="display" writable="1" construct-only="1" transfer-ownership="none">
+				<type name="Display"/>
+			</property>
+		</class>
+
+		<record name="Atom" c:type="GdkAtom" disguised="1" pointer="1">
+			<method name="name" c:identifier="gdk_atom_name">
+				<return-value transfer-ownership="full">
+					<type name="utf8" c:type="gchar*"/>
+				</return-value>
+				<parameters>
+					<instance-parameter name="atom" transfer-ownership="none">
+						<type name="Atom" c:type="GdkAtom"/>
+					</instance-parameter>
+				</parameters>
+			</method>
+			<function name="intern" c:identifier="gdk_atom_intern">
+				<return-value transfer-ownership="none">
+					<type name="Atom" c:type="GdkAtom"/>
+				</return-value>
+				<parameters>
+					<parameter name="atom_name" transfer-ownership="none">
+						<type name="utf8" c:type="const gchar*"/>
+					</parameter>
+					<parameter name="only_if_exists" transfer-ownership="none">
+						<type name="gboolean" c:type="gboolean"/>
+					</parameter>
+				</parameters>
+			</function>
+		</record>
+
+		<union name="DoubleIEEE754" c:type="GDoubleIEEE754">
+			<field name="v_double" writable="1">
+				<type name="gdouble" c:type="gdouble"/>
+			</field>
+			<record name="mpn" c:type="mpn">
+				<field name="mantissa_low" writable="1" bits="32">
+					<type name="guint" c:type="guint"/>
+				</field>
+				<field name="mantissa_high" writable="1" bits="20">
+					<type name="guint" c:type="guint"/>
+				</field>
+				<field name="biased_exponent" writable="1" bits="11">
+					<type name="guint" c:type="guint"/>
+				</field>
+				<field name="sign" writable="1" bits="1">
+					<type name="guint" c:type="guint"/>
+				</field>
+			</record>
+		</union>
+
+		<constant name="CURRENT_TIME" value="0" c:type="GDK_CURRENT_TIME">
+			<type name="gint" c:type="gint"/>
+		</constant>
+
+		<callback name="EventFunc" c:type="GdkEventFunc">
+			<return-value transfer-ownership="none">
+				<type name="none" c:type="void"/>
+			</return-value>
+			<parameters>
+				<parameter name="event" transfer-ownership="none">
+					<type name="Event" c:type="GdkEvent*"/>
+				</parameter>
+				<parameter name="data" transfer-ownership="none" nullable="1" allow-none="1"
+						   closure="1">
+					<type name="gpointer" c:type="gpointer"/>
+				</parameter>
+			</parameters>
+		</callback>
+
+	</namespace>
+</repository>
