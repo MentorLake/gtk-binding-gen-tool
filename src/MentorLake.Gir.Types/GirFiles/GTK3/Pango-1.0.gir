@@ -11999,7 +11999,9 @@ You must free the returned array.</doc>
           <parameter name="alignments" direction="out" caller-allocates="0" transfer-ownership="full" optional="1" allow-none="1">
             <doc xml:space="preserve">location to store an array of tab
   stop alignments</doc>
-            <type name="TabAlign" c:type="PangoTabAlign**"/>
+             <array zero-terminated="0" c:type="PangoTabAlign**">
+                <type name="TabAlign" c:type="PangoTabAlign*"/>
+              </array>
           </parameter>
           <parameter name="locations" direction="out" caller-allocates="0" transfer-ownership="full" optional="1" allow-none="1">
             <doc xml:space="preserve">location to store an array
@@ -13798,7 +13800,7 @@ characters in the text will determine the final resolved direction.</doc>
   if @text is nul-terminated and the length should be calculated.</doc>
           <type name="gint" c:type="int"/>
         </parameter>
-        <parameter name="pbase_dir" transfer-ownership="none">
+        <parameter name="pbase_dir" transfer-ownership="none" direction="inout">
           <doc xml:space="preserve">input base direction, and output resolved direction.</doc>
           <type name="Direction" c:type="PangoDirection*"/>
         </parameter>

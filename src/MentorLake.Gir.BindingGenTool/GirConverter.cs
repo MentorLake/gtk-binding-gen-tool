@@ -223,7 +223,29 @@ public class GirConverter
 		return s_patterns.FirstOrDefault(p => p.r.IsMatch(typeName)).result;
 	}
 
-	// Use array c:type attribute if c:type attribute missing from array element definition?
+	private ConvertedType ParseKeywords(string cType)
+	{
+		var result = new ConvertedType();
+		result.CleanedCType = cType.Replace("volatile ", "");
+		result.IsDataReadOnly = result.CleanedCType.StartsWith("const");
+		result.IsPointerReadOnly = result.CleanedCType.EndsWith("const");
+		if (result.IsDataReadOnly) result.CleanedCType = result.CleanedCType.Replace("const ", "");
+		if (result.IsPointerReadOnly) result.CleanedCType = result.CleanedCType.Replace(" const", "");
+		return result;
+	}
+
+	private ConvertedType TrimPointerSymbol(ConvertedType result, string errorMessage = "Tried to trim pointer symbol but does not exist.")
+	{
+		if (!result.CleanedCType.EndsWith("*"))
+		{
+			Console.WriteLine(errorMessage);
+			return result;
+			//throw new Exception("Tried to trim pointer symbol but does not exist.");
+		}
+
+		result.CleanedCType = result.CleanedCType.Substring(0, result.CleanedCType.Length - 1);
+		return result;
+	}
 
 	private ConvertedType ConvertCType(string namespaceName, string typeName, string cType, bool isOutParam)
 	{
@@ -232,6 +254,20 @@ public class GirConverter
 			return new()
 			{
 				ConvertedTypeName = "string",
+				IsBuiltInType = true,
+				Name = typeName,
+				FoundCTypeMatch = true,
+				Namespace = namespaceName,
+				CType = cType,
+				IsCTypeSpecified = true
+			};
+		}
+
+		if (typeName == "gpointer" && cType == "void")
+		{
+			return new()
+			{
+				ConvertedTypeName = "IntPtr",
 				IsBuiltInType = true,
 				Name = typeName,
 				FoundCTypeMatch = true,
@@ -251,17 +287,18 @@ public class GirConverter
 			};
 		}
 
-		var result = new ConvertedType();
-		result.CleanedCType = cType.Replace("volatile ", "");
-		result.IsDataReadOnly = result.CleanedCType.StartsWith("const");
-		result.IsPointerReadOnly = result.CleanedCType.EndsWith("const");
-		if (result.IsDataReadOnly) result.CleanedCType = result.CleanedCType.Replace("const ", "");
-		if (result.IsPointerReadOnly) result.CleanedCType = result.CleanedCType.Replace(" const", "");
 
-		if (result.CleanedCType.EndsWith("*") && isOutParam)
+		if (cType == "gpointer" || cType == "gconstpointer")
 		{
-			result.CleanedCType = result.CleanedCType.Substring(0, result.CleanedCType.Length - 1);
+
 		}
+
+		// Does this only apply to out parameters?
+		cType = cType == "gpointer" || cType == "gconstpointer" ? typeName + "*" : cType;
+
+
+		var result = ParseKeywords(cType);
+		if (isOutParam) result = TrimPointerSymbol(result);
 
 		if (result.CleanedCType.EndsWith("*"))
 		{
@@ -272,7 +309,6 @@ public class GirConverter
 		result.ConvertedTypeName = MapToBuiltInType(result.CleanedCType) ?? result.CleanedCType;
 		if (result is { IsPointer: true, ConvertedTypeName: "void" }) result.ConvertedTypeName = "IntPtr";
 		if (isOutParam && result is { ConvertedTypeName: "void" }) result.ConvertedTypeName = "IntPtr";
-		if (typeName == "gpointer" && result is { ConvertedTypeName: "void" }) result.ConvertedTypeName = "IntPtr";
 
 		if (result.ConvertedTypeName.Contains("*"))
 		{
@@ -312,12 +348,25 @@ public class GirConverter
 		var typeNamespace = typeNameParts.Length <= 1 ? _currentNamespace.Name : typeNameParts[0];
 		ConvertedType result = null;
 
-		if (arrayDepth > 0 && !string.IsNullOrEmpty(arrayType.Type))
+		if (arrayDepth > 0)
 		{
-			//var typeToSearch = arrayType.Type.EndsWith("*") ? arrayType.Type.Substring(0, arrayType.Type.Length - 1) : arrayType.Type;
-			var typeToSearch = arrayType.Type;
-			result = ConvertCType(typeNamespace, arrayType.Name, typeToSearch, isOutParam);
-			result.IsArray = true;
+			if (!string.IsNullOrEmpty(arrayType.Name))
+			{
+				result = ConvertCType(typeNamespace, arrayType.Name, arrayType.Type, isOutParam);
+			}
+			else
+			{
+				if (string.IsNullOrEmpty(type.TypeProperty))
+				{
+					result = ConvertCType(typeNamespace, arrayType.Name, arrayType.Type, isOutParam);
+				}
+				else
+				{
+					result = ConvertCType(typeNamespace, typeName, type.TypeProperty, isOutParam);
+				}
+
+				result.IsArray = true;
+			}
 		}
 		else
 		{
@@ -327,14 +376,16 @@ public class GirConverter
 		if (!result.IsCTypeSpecified)
 		{
 			//Console.WriteLine($"WARNING: C type not specified for [{type.Name}].");
-			result.ConvertedTypeName = ConvertNameToCType(typeName, typeNamespace) ?? MapToBuiltInType(typeName) ?? typeName;
+			var nameMatch = ConvertNameToCType(typeName, typeNamespace);
+			result.ConvertedTypeName = nameMatch.match ?? MapToBuiltInType(typeName) ?? typeName;
+			result.IsPointer = IsObjectType(result.ConvertedTypeName, nameMatch.ns);
 			result.IsBuiltInType = s_builtInTypes.Contains(result.ConvertedTypeName);
 		}
 
 		if (result.IsCTypeSpecified && !result.FoundCTypeMatch)
 		{
 			var warning = $"WARNING: Failed to find C type [{result.ConvertedTypeName}]. Falling back to type name [{typeName}].";
-			result.ConvertedTypeName = ConvertNameToCType(typeName, typeNamespace) ?? MapToBuiltInType(typeName) ?? typeName;
+			result.ConvertedTypeName = ConvertNameToCType(typeName, typeNamespace).match ?? MapToBuiltInType(typeName) ?? typeName;
 			result.IsBuiltInType = s_builtInTypes.Contains(result.ConvertedTypeName);
 			Console.WriteLine($"{warning} Found {result.ConvertedTypeName}.");
 		}
@@ -434,7 +485,7 @@ public class GirConverter
 
 		return new ConvertedMethod()
 		{
-			Name = m.Name.ToPascalCase(),
+			Name = !string.IsNullOrEmpty(m.Name) ? m.Name.ToPascalCase() : m.Identifier.ToPascalCase(),
 			ExternName = m.Identifier,
 			ReturnValue = ConvertReturnValue(m.ReturnValue),
 			Parameters = parameters.Select(ConvertParameter).ToList(),
@@ -466,12 +517,16 @@ public class GirConverter
 		};
 	}
 
-	private ConvertedSignal ConvertSignal(Signal signal)
+	private ConvertedSignal ConvertSignal(Signal signal, string className)
 	{
+		var parameters = (signal.Parameters?.Parameter ?? new()).Select(ConvertParameter).ToList();
+		parameters.Insert(0, new ConvertedParameter() { Name = "self", ConvertedType = new() { ConvertedTypeName = className, Namespace = _currentNamespace.Name, IsPointer = true, IsSafeHandle = true }, Modifier = "" });
+		parameters.Add(new ConvertedParameter() { Name = "user_data", ConvertedType = new() { ConvertedTypeName = "IntPtr", IsBuiltInType = true }, Modifier = "" });
+
 		return new ConvertedSignal()
 		{
 			Name = signal.Name,
-			Parameters = (signal.Parameters?.Parameter ?? new()).Select(ConvertParameter).ToList(),
+			Parameters = parameters,
 			ReturnValue = ConvertReturnValue(signal.ReturnValue)
 		};
 	}
@@ -544,7 +599,7 @@ public class GirConverter
 			VirtualMethods = ConvertList(i.VirtualMethod, ConvertFunction),
 			Properties = ConvertList(i.Property, ConvertProperty),
 			Fields = ConvertList(i.Field, ConvertField),
-			Signals = ConvertList(i.Signal, ConvertSignal),
+			Signals = ConvertList(i.Signal, s => ConvertSignal(s, i.Type + "Handle")),
 			Callbacks = ConvertList(i.Callback, ConvertCallback),
 			Constants = ConvertList(i.Constant, ConvertConstant)
 		};
@@ -578,9 +633,20 @@ public class GirConverter
 		return default;
 	}
 
-	private string ConvertNameToCType(string name, string namespaceNameToSearch)
+	private bool IsObjectType(string cTypeName, string namespaceNameToSearch)
 	{
-		if (string.IsNullOrEmpty(name)) return null;
+		var ns = _namespaces.FirstOrDefault(ns => ns.Name == namespaceNameToSearch);
+		if (ns == null) return false;
+		return ns.Interface.Any(i => i.Type == cTypeName)
+			|| ns.Class.Any(i => i.Type == cTypeName)
+			|| ns.Union.Any(i => i.Type == cTypeName)
+			|| ns.Alias.Any(i => i.Type == cTypeName)
+			|| ns.Record.Any(i => i.Type == cTypeName);
+	}
+
+	private (string ns, string match) ConvertNameToCType(string name, string namespaceNameToSearch)
+	{
+		if (string.IsNullOrEmpty(name)) return default;
 
 		var namespacesToSearch = new[] { _namespaces.First(ns => ns.Name == namespaceNameToSearch), _namespaces.First(ns => ns.Name == "GObject") };
 
@@ -595,10 +661,10 @@ public class GirConverter
 				?? ns?.Bitfield.FirstOrDefault(i => i.Name == name)?.Type
 				?? ns?.Record.FirstOrDefault(i => i.Name == name)?.Type;
 
-			if (match != null) return match;
+			if (match != null) return (ns.Name, match);
 		}
 
-		return null;
+		return default;
 	}
 
 	public ConvertedClass ConvertClass(Class c)
@@ -609,7 +675,7 @@ public class GirConverter
 		{
 			var iParts = i.Name.Split(".");
 			var namespaceToSearch = iParts.Length > 1 ? iParts[0] : _currentNamespace.Name;
-			var match = ConvertNameToCType(iParts.Last(), namespaceToSearch);
+			var match = ConvertNameToCType(iParts.Last(), namespaceToSearch).match;
 			if (match != null) return match + "Handle";
 			Console.WriteLine("FAILED TO FIND INTERFACE: " + i.Name);
 			return null;
@@ -621,7 +687,7 @@ public class GirConverter
 		{
 			var parentParts = c.Parent.Split(".");
 			var namespaceToSearch = parentParts.Length > 1 ? parentParts[0] : _currentNamespace.Name;
-			var match = ConvertNameToCType(parentParts.Last(), namespaceToSearch);
+			var match = ConvertNameToCType(parentParts.Last(), namespaceToSearch).match;
 			if (match != null) parentClassName = match + "Handle";
 			else Console.WriteLine($"FAILED TO FIND PARENT CLASS [{className}] [{c.Parent}]" );
 		}
@@ -641,7 +707,7 @@ public class GirConverter
 			Properties = ConvertList(c.Property, ConvertProperty),
 			Fields = ConvertList(c.Field, ConvertField),
 			Constructors = ConvertList(c.Constructor, m => ConvertConstructor(m, c.Type ?? c.TypeName)),
-			Signals = ConvertList(c.Signal, ConvertSignal),
+			Signals = ConvertList(c.Signal, s => ConvertSignal(s, className + "Handle")),
 			Callbacks = ConvertList(c.Callback, ConvertCallback),
 			Constants = ConvertList(c.Constant, ConvertConstant),
 			Parent = parentClassName

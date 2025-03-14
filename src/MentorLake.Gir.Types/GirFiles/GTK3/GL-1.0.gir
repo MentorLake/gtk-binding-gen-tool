@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <repository xmlns="http://www.gtk.org/introspection/core/1.0" xmlns:c="http://www.gtk.org/introspection/c/1.0" version="1.2">
-  <namespace name="GL" version="1.0" c:identifier-prefixes="GL" c:symbol-prefixes="gl">
+  <namespace name="GL" version="1.0" c:identifier-prefixes="GL" c:symbol-prefixes="gl" shared-library="libGL.so.1">
     <record name="bitfield" c:type="GLbitfield"/>
     <record name="charARB" c:type="GLcharARB"/>
     <record name="clampf" c:type="GLclampf"/>

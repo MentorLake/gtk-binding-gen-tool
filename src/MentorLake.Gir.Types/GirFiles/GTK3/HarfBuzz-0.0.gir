@@ -4783,7 +4783,7 @@ allocating big enough size for @buf, 128 bytes is more than enough.</doc>
           </parameter>
           <parameter name="size" direction="out" caller-allocates="0" transfer-ownership="full">
             <doc xml:space="preserve">the allocated size of @buf</doc>
-            <type name="guint" c:type="unsigned int"/>
+            <type name="guint" c:type="unsigned int*"/>
           </parameter>
         </parameters>
       </method>
@@ -6403,7 +6403,7 @@ glyph ID. The name should be returned in a string output parameter.</doc>
         </parameter>
         <parameter name="size" direction="out" caller-allocates="0" transfer-ownership="full">
           <doc xml:space="preserve">Length of the glyph-name string retrieved</doc>
-          <type name="guint" c:type="unsigned int"/>
+          <type name="guint" c:type="unsigned int*"/>
         </parameter>
         <parameter name="user_data" transfer-ownership="none" nullable="1" allow-none="1" closure="5">
           <doc xml:space="preserve">User data pointer passed by the caller</doc>
@@ -16463,7 +16463,7 @@ allocating big enough size for @buf, 128 bytes is more than enough.</doc>
           </parameter>
           <parameter name="size" direction="out" caller-allocates="0" transfer-ownership="full">
             <doc xml:space="preserve">the allocated size of @buf</doc>
-            <type name="guint" c:type="unsigned int"/>
+            <type name="guint" c:type="unsigned int*"/>
           </parameter>
         </parameters>
       </method>
@@ -16488,7 +16488,7 @@ allocating big enough size for @buf, 128 bytes is more than enough.</doc>
         </parameter>
         <parameter name="size" direction="out" caller-allocates="0" transfer-ownership="full">
           <doc xml:space="preserve">the allocated size of @buf</doc>
-          <type name="guint" c:type="unsigned int"/>
+          <type name="guint" c:type="unsigned int*"/>
         </parameter>
       </parameters>
     </function>

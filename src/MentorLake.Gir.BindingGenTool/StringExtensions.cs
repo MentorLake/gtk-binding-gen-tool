@@ -84,7 +84,8 @@ public static class StringExtensions
 	}
 	public static string NormalizeName(this string s)
 	{
-		return Keywords.Contains(s) ? "@" + s : s;
+		var result = Keywords.Contains(s) ? "@" + s : s;
+		return result.Replace('-', '_');
 	}
 
 	public static readonly string[] Keywords = { "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char",

@@ -5484,7 +5484,7 @@ a empty value you can use "".</doc>
           </instance-parameter>
           <parameter name="handler" transfer-ownership="none">
             <doc xml:space="preserve">a function to be called when a property changes its value</doc>
-            <type name="PropertyChangeHandler" c:type="AtkPropertyChangeHandler*"/>
+            <type name="PropertyChangeHandler" c:type="AtkPropertyChangeHandler"/>
           </parameter>
         </parameters>
       </method>

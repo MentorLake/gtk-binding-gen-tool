@@ -17205,7 +17205,7 @@ details.</doc>
         </parameter>
         <parameter name="c_handler" transfer-ownership="none" closure="3">
           <doc xml:space="preserve">the #GCallback to connect.</doc>
-          <type name="Callback" c:type="GCallback"/>
+          <type name="Callback" c:type="void*"/>
         </parameter>
         <parameter name="data" transfer-ownership="none" nullable="1" allow-none="1" scope="notified">
           <doc xml:space="preserve">data to pass to @c_handler calls.</doc>

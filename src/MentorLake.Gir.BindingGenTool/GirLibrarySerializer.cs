@@ -18,7 +18,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 
 		if (c.Signals.Any())
 		{
-			//output.AppendLine().AppendLine(CSharpSignalsSerializer.Serialize(c, libraryDeclaration, libraries));
+			output.AppendLine(SerializeSignals(c));
 		}
 
 		output.AppendLine();
@@ -32,6 +32,87 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine("{");
 		foreach (var m in c.Constructors) output.AppendLine(SerializeExternMethod(m));
 		foreach (var m in c.Methods.Concat(c.Functions).DistinctBy(m => m.Name)) output.AppendLine(SerializeExternMethod(m));
+		output.AppendLine("}");
+		return output.ToString();
+	}
+
+	private string SerializeSignals(ConvertedClass c)
+	{
+		var output = new StringBuilder();
+		output.AppendLine($"public static class {c.Name}SignalExtensions");
+		output.AppendLine("{");
+
+		foreach (var signal in c.Signals)
+		{
+			var handlerReturn = signal.ReturnValue.Type.ConvertedTypeName != "void" ? "signalStruct.ReturnValue" : "";
+			var outParameterDefaultAssignments = string.Join("\n\t\t\t", signal.Parameters.Where(p => p.Modifier == "out").Select(p => $"{p.Name} = default;"));
+
+			var method = @$"
+	public static IObservable<{c.Name}SignalStructs.{signal.Name.ToPascalCase()}Signal> Signal_{signal.Name.ToPascalCase()}(this {c.Name} instance, GConnectFlags connectFlags = GConnectFlags.G_CONNECT_AFTER)
+	{{
+		return Observable.Create((IObserver<{c.Name}SignalStructs.{signal.Name.ToPascalCase()}Signal> obs) =>
+		{{
+			{c.Name}SignalDelegates.{signal.Name.NormalizeName()} handler = ({string.Join(", ", signal.Parameters.Select(p => $"{p.Modifier} {SerializeType(p.ConvertedType)} {p.Name}"))}) =>
+			{{
+				{outParameterDefaultAssignments}
+
+				var signalStruct = new {c.Name}SignalStructs.{signal.Name.ToPascalCase()}Signal()
+				{{
+					{string.Join(", ", signal.Parameters.Select(p => $"{p.Name.ToPascalCase()} = {p.Name}"))}
+				}};
+
+				obs.OnNext(signalStruct);
+				return {handlerReturn};
+			}};
+
+			var handlerId = GObjectGlobalFunctions.SignalConnectData(instance, ""{signal.Name}"", Marshal.GetFunctionPointerForDelegate(handler), IntPtr.Zero, null, connectFlags);
+
+			return Disposable.Create(() =>
+			{{
+				GObjectGlobalFunctions.SignalHandlerDisconnect(instance, handlerId);
+				obs.OnCompleted();
+			}});
+		}});
+	}}";
+			output.AppendLine(method);
+		}
+
+		output.AppendLine("}");
+
+		output.AppendLine();
+		output.AppendLine($"public static class {c.Name}SignalStructs");
+		output.AppendLine("{");
+		foreach (var s in c.Signals)
+		{
+			output.AppendLine();
+			output.AppendLine($"public struct {s.Name.ToPascalCase()}Signal");
+			output.AppendLine("{");
+
+			foreach (var p in s.Parameters)
+			{
+				output.AppendLine($"\tpublic {SerializeType(p.ConvertedType)} {p.Name.ToPascalCase()};");
+			}
+
+			if (s.ReturnValue.Type.ConvertedTypeName != "void")
+			{
+				output.AppendLine($"\tpublic {SerializeType(s.ReturnValue.Type)} ReturnValue;");
+			}
+
+			output.AppendLine("}");
+		}
+
+		output.AppendLine("}");
+
+		output.AppendLine();
+		output.AppendLine($"public static class {c.Name}SignalDelegates");
+		output.AppendLine("{");
+
+		foreach (var s in c.Signals)
+		{
+			output.AppendLine();
+			output.AppendLine(SerializeCallback(s));
+		}
+
 		output.AppendLine("}");
 		return output.ToString();
 	}
@@ -119,7 +200,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		var methodName = ctor.Name.ToPascalCase().Replace(className, "");
 		var externCall = $"{className}Externs.{ctor.ExternName}({string.Join(", ", ctor.Parameters.Select(p => $"{p.Modifier} {p.Name}".Trim()))});";
 		var output = new StringBuilder();
-		output.AppendLine($"\tpublic static {className} {methodName}({parameters})");
+		output.AppendLine($"\tpublic static {SerializeType(ctor.ReturnValue.Type)} {methodName}({parameters})");
 		output.AppendLine("\t{");
 		output.AppendLine($"\t\treturn {externCall}");
 		output.AppendLine("\t}");
@@ -249,7 +330,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var output = new StringBuilder();
 		output.AppendLine("[Flags]");
-		output.AppendLine($"public enum {field.Name}");
+		output.AppendLine($"public enum {field.Name} : long");
 		output.AppendLine("{");
 
 		for (var i = 0; i < field.Members.Count; i++)
