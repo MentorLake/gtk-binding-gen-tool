@@ -65,11 +65,13 @@ public class GirLibrarySerializer(List<Repository> repositories)
 				return {handlerReturn};
 			}};
 
+			var gcHandle = System.Runtime.InteropServices.GCHandle.Alloc(handler);
 			var handlerId = GObjectGlobalFunctions.SignalConnectData(instance, ""{signal.Name}"", Marshal.GetFunctionPointerForDelegate(handler), IntPtr.Zero, null, connectFlags);
 
 			return Disposable.Create(() =>
 			{{
 				GObjectGlobalFunctions.SignalHandlerDisconnect(instance, handlerId);
+				gcHandle.Free();
 				obs.OnCompleted();
 			}});
 		}});
@@ -305,6 +307,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine($"public static class {unionName}Extensions");
 		output.AppendLine("{");
 		foreach (var m in union.Methods) output.AppendLine(SerializeMethod(m, unionName, false));
+		output.AppendLine();
+		output.AppendLine($"\tpublic static {unionName} Dereference(this {unionName}Handle x) => System.Runtime.InteropServices.Marshal.PtrToStructure<{unionName}>(x.DangerousGetHandle());");
 		output.AppendLine("}");
 
 		output.AppendLine($"internal class {unionName}Externs");
@@ -434,10 +438,6 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		{
 			var output = new StringBuilder();
 			var union = converter.ConvertUnion(s);
-			if (string.IsNullOrEmpty(union.Name))
-			{
-
-			}
 			output.AppendLine(header).AppendLine().Append(SerializeUnion(union));
 			File.WriteAllText(Path.Join(outputDir, union.Name + ".cs"), output.ToString());
 		}

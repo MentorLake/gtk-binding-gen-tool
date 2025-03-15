@@ -135,18 +135,14 @@ public class ConvertedClass : ConvertedInterface
 public class GirConverter
 {
 	private readonly Namespace _currentNamespace;
-	private readonly List<Repository> _repositories;
 	private readonly IEnumerable<Interface> _allInterfaces;
-	private readonly List<Class> _allClasses;
-	private List<Namespace> _namespaces;
+	private readonly List<Namespace> _namespaces;
 
 	public GirConverter(Namespace currentNamespace, List<Repository> repositories)
 	{
 		_currentNamespace = currentNamespace;
-		_repositories = repositories;
 		_namespaces = repositories.Select(r => r.Namespace.First()).ToList();
 		_allInterfaces = _namespaces.Where(ns => ns.Interface != null).SelectMany(ns => ns.Interface).ToList();
-		_allClasses = _namespaces.Where(ns => ns.Class != null).SelectMany(ns => ns.Class).ToList();
 	}
 
 	private static readonly string[] s_builtInTypes = {
