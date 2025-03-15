@@ -44,7 +44,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 
 		foreach (var signal in c.Signals)
 		{
-			var handlerReturn = signal.ReturnValue.Type.ConvertedTypeName != "void" ? "signalStruct.ReturnValue" : "";
+			var handlerReturn = signal.ReturnValue.Type.CSharpTypeName != "void" ? "signalStruct.ReturnValue" : "";
 			var outParameterDefaultAssignments = string.Join("\n\t\t\t", signal.Parameters.Where(p => p.Modifier == "out").Select(p => $"{p.Name} = default;"));
 
 			var method = @$"
@@ -93,7 +93,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 				output.AppendLine($"\tpublic {SerializeType(p.ConvertedType)} {p.Name.ToPascalCase()};");
 			}
 
-			if (s.ReturnValue.Type.ConvertedTypeName != "void")
+			if (s.ReturnValue.Type.CSharpTypeName != "void")
 			{
 				output.AppendLine($"\tpublic {SerializeType(s.ReturnValue.Type)} ReturnValue;");
 			}
@@ -136,8 +136,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 
 	private string SerializeType(ConvertedType t)
 	{
-		var typeName = "MentorLake." + t.Namespace + "." + t.ConvertedTypeName;
-		if (t.IsBuiltInType) typeName = t.ConvertedTypeName;
+		var typeName = "MentorLake." + t.Namespace + "." + t.CSharpTypeName;
+		if (t.IsBuiltInType) typeName = t.CSharpTypeName;
 		return typeName;
 	}
 
@@ -150,7 +150,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		{
 			var marshalledHandleType = p.ConvertedType.IsInterface ? typeName + "Impl" : typeName;
 
-			if (!p.ConvertedType.IsArray)
+			if (!p.ConvertedType.IsBasicArray)
 			{
 				attr = $"[MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{marshalledHandleType}>))]";
 			}
@@ -185,7 +185,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.Append($"public struct {alias.Name}");
 		output.AppendLine();
 		output.AppendLine("{");
-		if (alias.WrappedType.ConvertedTypeName != "void") output.AppendLine($"\tpublic {SerializeType(alias.WrappedType)} Value;");
+		if (alias.WrappedType.CSharpTypeName != "void") output.AppendLine($"\tpublic {SerializeType(alias.WrappedType)} Value;");
 		output.AppendLine("}");
 		output.AppendLine();
 		output.AppendLine($"public class {alias.Name}Handle : BaseSafeHandle");
@@ -273,7 +273,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"\t[DllImport({_currentNamespace.Name}Library.Name)]");
-		if (m.TransferOwnership == ReturnValueTransferOwnership.Full && m.ReturnValue.Type.ConvertedTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
+		if (m.TransferOwnership == ReturnValueTransferOwnership.Full && m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
 		var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p, true, m.IsInstanceMethod)));
 		output.AppendLine($"\tinternal static extern {SerializeType(m.ReturnValue.Type)} {m.ExternName}({parameters});");
 		return output.ToString();
@@ -283,7 +283,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var type = "";
 		if (field.Callback != null) type = "IntPtr";
-		else if (field.Type != null) type = field.Type.IsPointer ? "IntPtr" : field.Type.ConvertedTypeName;
+		else if (field.Type != null) type = field.Type.IsPointer ? "IntPtr" : field.Type.CSharpTypeName;
 		else throw new Exception("Unknown field type: " + field.Name);
 		return $"public {type} {field.Name};";
 	}
