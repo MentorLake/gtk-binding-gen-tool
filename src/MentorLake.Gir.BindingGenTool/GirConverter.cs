@@ -347,7 +347,7 @@ public class GirConverter
 			result.IsBuiltInType = s_builtInTypes.Contains(result.CSharpTypeName);
 		}
 
-		if (!result.IsBuiltInType && result.IsPointer)
+		if (!result.IsBuiltInType && result.IsPointer && !IsCallback(result.CSharpTypeName, result.Namespace))
 		{
 			result.IsInterface = _allInterfaces.Any(i => i.Name == result.CSharpTypeName || i.Type == result.CSharpTypeName || i.Type == result.CSharpTypeName);
 			result.IsSafeHandle = true;
@@ -587,6 +587,13 @@ public class GirConverter
 		}
 
 		return default;
+	}
+
+	private bool IsCallback(string cTypeName, string namespaceNameToSearch)
+	{
+		var ns = _namespaces.FirstOrDefault(ns => ns.Name == namespaceNameToSearch);
+		if (ns == null) return false;
+		return ns.Callback.Any(i => i.Type == cTypeName);
 	}
 
 	private bool IsObjectType(string cTypeName, string namespaceNameToSearch)

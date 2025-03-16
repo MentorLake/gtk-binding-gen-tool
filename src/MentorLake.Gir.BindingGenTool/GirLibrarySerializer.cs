@@ -71,8 +71,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 			return Disposable.Create(() =>
 			{{
 				GObjectGlobalFunctions.SignalHandlerDisconnect(instance, handlerId);
-				gcHandle.Free();
 				obs.OnCompleted();
+				gcHandle.Free();
 			}});
 		}});
 	}}";
@@ -275,7 +275,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"\t[DllImport({_currentNamespace.Name}Library.Name)]");
-		if (m.TransferOwnership == ReturnValueTransferOwnership.Full && m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
+		if (m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
 		var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p, true, m.IsInstanceMethod)));
 		output.AppendLine($"\tinternal static extern {SerializeType(m.ReturnValue.Type)} {m.ExternName}({parameters});");
 		return output.ToString();

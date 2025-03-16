@@ -20804,7 +20804,7 @@ surface from within any callback of this signal. Calling
 gdk_offscreen_window_get_surface() will lead to a crash.</doc>
         <return-value transfer-ownership="full">
           <doc xml:space="preserve">the newly created #cairo_surface_t for the offscreen window</doc>
-          <type name="cairo.Surface"/>
+          <type name="cairo.Surface" c:type="cairo_surface_t*"/>
         </return-value>
         <parameters>
           <parameter name="width" transfer-ownership="none">
@@ -24339,26 +24339,26 @@ for GTK+ widgets for the following use case:
 static gboolean timeout_callback (gpointer data)
 {
    SomeWidget *self = data;
-   
+
    // do stuff with self
-   
+
    self-&gt;timeout_id = 0;
-   
+
    return G_SOURCE_REMOVE;
 }
- 
+
 static void some_widget_do_stuff_later (SomeWidget *self)
 {
    self-&gt;timeout_id = g_timeout_add (timeout_callback, self)
 }
- 
+
 static void some_widget_finalize (GObject *object)
 {
    SomeWidget *self = SOME_WIDGET (object);
-   
+
    if (self-&gt;timeout_id)
      g_source_remove (self-&gt;timeout_id);
-   
+
    G_OBJECT_CLASS (parent_class)-&gt;finalize (object);
 }
 ]|</doc>
