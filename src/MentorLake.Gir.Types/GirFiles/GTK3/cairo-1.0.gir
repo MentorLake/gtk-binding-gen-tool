@@ -3537,7 +3537,9 @@ element and should free any memory and resources allocated for it.</doc>
       </return-value>
       <parameters>
         <parameter name="data" transfer-ownership="none">
-          <type name="guint8" c:type="unsigned char*"/>
+          <array zero-terminated="0" c:type="guint8*">
+            <type name="guint8"/>
+          </array>
         </parameter>
         <parameter name="format" transfer-ownership="none">
           <type name="_format_t" c:type="cairo_format_t"/>

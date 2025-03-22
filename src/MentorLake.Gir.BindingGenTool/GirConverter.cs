@@ -230,7 +230,7 @@ public class GirConverter
 
 	private void ConvertCTypeToCSharpType(ConvertedType convertedType, bool isOutParam)
 	{
-		if (convertedType.Name == "utf8")
+		if (convertedType.Name == "utf8" || convertedType.Name == "filename")
 		{
 			convertedType.CSharpTypeName = "string";
 			convertedType.IsBuiltInType = true;
