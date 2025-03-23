@@ -455,7 +455,7 @@ movements. See gdk_x11_window_set_user_time().</doc>
         <parameters>
           <instance-parameter name="display" transfer-ownership="none">
             <doc xml:space="preserve">a #GdkDisplay</doc>
-            <type name="X11Display" c:type="GdkDisplay*"/>
+            <type name="Gdk.GdkDisplay" c:type="GdkDisplay*"/>
           </instance-parameter>
         </parameters>
       </method>
@@ -980,7 +980,7 @@ was already known to GDK, a new reference to the existing
         <parameters>
           <instance-parameter name="window" transfer-ownership="none">
             <doc xml:space="preserve">a native #GdkWindow.</doc>
-            <type name="X11Window" c:type="GdkWindow*"/>
+            <type name="Gdk.GdkWindow" c:type="GdkWindow*"/>
           </instance-parameter>
         </parameters>
       </method>
