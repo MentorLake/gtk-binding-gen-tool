@@ -193,6 +193,12 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine($"public class {alias.Name}Handle : BaseSafeHandle");
 		output.AppendLine("{");
 		output.AppendLine("}");
+		output.AppendLine();
+		output.AppendLine($"public static class {alias.Name}HandleExtensions");
+		output.AppendLine("{");
+		output.AppendLine($"\tpublic static {alias.Name} Dereference(this {alias.Name}Handle x) => System.Runtime.InteropServices.Marshal.PtrToStructure<{alias.Name}>(x.DangerousGetHandle());");
+		if (alias.WrappedType.CSharpTypeName != "void") output.AppendLine($"\tpublic static {SerializeType(alias.WrappedType)} DereferenceValue(this {alias.Name}Handle x) => x.Dereference().Value;");
+		output.AppendLine("}");
 		return output.ToString();
 	}
 
