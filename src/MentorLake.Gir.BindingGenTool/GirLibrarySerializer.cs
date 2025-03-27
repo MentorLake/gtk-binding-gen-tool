@@ -490,7 +490,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		var constants = new StringBuilder();
 		constants.AppendLine(header);
 		constants.AppendLine();
-		constants.AppendLine($"public class {_currentNamespace.Name}Constants");
+		constants.AppendLine($"public static class {_currentNamespace.Name}Constants");
 		constants.AppendLine("{");
 
 		foreach (var constant in _currentNamespace.Constant)
@@ -499,11 +499,11 @@ public class GirLibrarySerializer(List<Repository> repositories)
 
 			if (c.Type.CSharpTypeName == "string")
 			{
-				constants.AppendLine($"\tpublic {SerializeType(c.Type)} {c.Name.NormalizeName()} = \"{c.Value}\";");
+				constants.AppendLine($"\tpublic static {SerializeType(c.Type)} {c.Name.NormalizeName()} = \"{c.Value}\";");
 			}
 			else
 			{
-				constants.AppendLine($"\tpublic {SerializeType(c.Type)} {c.Name.NormalizeName()} = {c.Value};");
+				constants.AppendLine($"\tpublic static {SerializeType(c.Type)} {c.Name.NormalizeName()} = {c.Value};");
 			}
 		}
 
