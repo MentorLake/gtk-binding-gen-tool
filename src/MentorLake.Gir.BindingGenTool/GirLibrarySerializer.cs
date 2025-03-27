@@ -487,18 +487,27 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		globalFunctionsOutput.AppendLine("}");
 		File.WriteAllText(Path.Join(outputDir, $"{_currentNamespace.Name}GlobalFunctions.cs"), globalFunctionsOutput.ToString());
 
-		// var constants = new StringBuilder();
-		// constants.AppendLine(header);
-		// constants.AppendLine();
-		// constants.AppendLine($"public class {repo.Name}Constants");
-		// constants.AppendLine("{");
-		//
-		// foreach (var c in repo.Constants)
-		// {
-		// 	constants.AppendLine("\t" + CSharp.CSharpConstantSerializer.Serialize(c, repo, repos));
-		// }
-		//
-		// constants.AppendLine("}");
-		// File.WriteAllText(Path.Join(outputDir, $"{ns.Name}Constants.cs"), constants.ToString());
+		var constants = new StringBuilder();
+		constants.AppendLine(header);
+		constants.AppendLine();
+		constants.AppendLine($"public class {_currentNamespace.Name}Constants");
+		constants.AppendLine("{");
+
+		foreach (var constant in _currentNamespace.Constant)
+		{
+			var c = converter.ConvertConstant(constant);
+
+			if (c.Type.CSharpTypeName == "string")
+			{
+				constants.AppendLine($"\tpublic {SerializeType(c.Type)} {c.Name.NormalizeName()} = \"{c.Value}\";");
+			}
+			else
+			{
+				constants.AppendLine($"\tpublic {SerializeType(c.Type)} {c.Name.NormalizeName()} = {c.Value};");
+			}
+		}
+
+		constants.AppendLine("}");
+		File.WriteAllText(Path.Join(outputDir, $"{_currentNamespace.Name}Constants.cs"), constants.ToString());
 	}
 }

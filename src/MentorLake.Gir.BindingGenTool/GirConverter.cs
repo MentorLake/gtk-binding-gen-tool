@@ -487,11 +487,11 @@ public class GirConverter
 		};
 	}
 
-	private ConvertedConstant ConvertConstant(Constant constant)
+	public ConvertedConstant ConvertConstant(Constant constant)
 	{
 		return new ConvertedConstant()
 		{
-			Name = constant.Identifier,
+			Name = constant.Name,
 			Value = constant.Value,
 			Type = ConvertTypeRef(constant.AnyType)
 		};

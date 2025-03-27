@@ -136,7 +136,7 @@ Set to U+FFFD REPLACEMENT CHARACTER.</doc>
     </constant>
     <constant name="CODEPOINT_INVALID" value="4294967295" c:type="HB_CODEPOINT_INVALID" version="8.0.0">
       <doc xml:space="preserve">Unused #hb_codepoint_t value.</doc>
-      <type name="codepoint_t" c:type="hb_codepoint_t"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <function-macro name="COLOR" c:identifier="HB_COLOR" version="2.1.0" introspectable="0">
       <doc xml:space="preserve">Constructs an #hb_color_t from four integers.</doc>
@@ -223,11 +223,11 @@ of the buffer.</doc>
       <doc xml:space="preserve">Constant signifying that a font does not have any
 named-instance index set.  This is the default of
 a font.</doc>
-      <type name="gint" c:type="gint"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="LANGUAGE_INVALID" value="0" c:type="HB_LANGUAGE_INVALID" version="0.6.0">
       <doc xml:space="preserve">An unset #hb_language_t.</doc>
-      <type name="language_t" c:type="hb_language_t"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="OT_LAYOUT_DEFAULT_LANGUAGE_INDEX" value="65535" c:type="HB_OT_LAYOUT_DEFAULT_LANGUAGE_INDEX">
       <doc xml:space="preserve">Special value for language index indicating default or unsupported language.</doc>
@@ -243,7 +243,7 @@ a font.</doc>
     </constant>
     <constant name="OT_LAYOUT_NO_VARIATIONS_INDEX" value="4294967295" c:type="HB_OT_LAYOUT_NO_VARIATIONS_INDEX">
       <doc xml:space="preserve">Special value for variations index indicating unsupported variation.</doc>
-      <type name="gint" c:type="gint"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="OT_MAX_TAGS_PER_LANGUAGE" value="3" c:type="HB_OT_MAX_TAGS_PER_LANGUAGE" version="2.0.0">
       <doc xml:space="preserve">Maximum number of OpenType tags that can correspond to a give #hb_language_t.</doc>
@@ -255,7 +255,7 @@ a font.</doc>
     </constant>
     <constant name="OT_VAR_NO_AXIS_INDEX" value="4294967295" c:type="HB_OT_VAR_NO_AXIS_INDEX" version="1.4.2" deprecated="1" deprecated-version="2.2.0">
       <doc xml:space="preserve">Do not use.</doc>
-      <type name="gint" c:type="gint"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <function-macro name="TAG" c:identifier="HB_TAG" introspectable="0">
       <doc xml:space="preserve">Constructs an #hb_tag_t from four character literals.</doc>
@@ -7006,7 +7006,7 @@ are not modified.</doc>
       <doc xml:space="preserve">Returns the currently-set named-instance index of the font.</doc>
       <return-value transfer-ownership="none">
         <doc xml:space="preserve">Named-instance index or %HB_FONT_NO_VAR_NAMED_INSTANCE.</doc>
-        <type name="guint" c:type="unsigned int"/>
+        <type name="guint" c:type="guint"/>
       </return-value>
       <parameters>
         <parameter name="font" transfer-ownership="none">

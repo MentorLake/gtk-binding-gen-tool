@@ -5741,7 +5741,7 @@ is what is done in the most common backends.</doc>
 
 This is useful for example in shaper modules, to use as the glyph for
 various zero-width Unicode characters (those passing [func@is_zero_width]).</doc>
-      <type name="Glyph" c:type="PangoGlyph"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="GLYPH_INVALID_INPUT" value="4294967295" c:type="PANGO_GLYPH_INVALID_INPUT" version="1.20">
       <doc xml:space="preserve">A `PangoGlyph` value for invalid input.
@@ -5751,14 +5751,14 @@ a glyph is rendered as a crossed box.
 
 Note that this value is defined such that it has the %PANGO_GLYPH_UNKNOWN_FLAG
 set.</doc>
-      <type name="Glyph" c:type="PangoGlyph"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="GLYPH_UNKNOWN_FLAG" value="268435456" c:type="PANGO_GLYPH_UNKNOWN_FLAG">
       <doc xml:space="preserve">Flag used in `PangoGlyph` to turn a `gunichar` value of a valid Unicode
 character into an unknown-character glyph for that `gunichar`.
 
 Such unknown-character glyphs may be rendered as a 'hex box'.</doc>
-      <type name="Glyph" c:type="PangoGlyph"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <function-macro name="GRAVITY_IS_IMPROPER" c:identifier="PANGO_GRAVITY_IS_IMPROPER" version="1.32" introspectable="0">
       <doc xml:space="preserve">Whether a `PangoGravity` represents a gravity that results in reversal

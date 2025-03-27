@@ -14177,7 +14177,7 @@ AM_CPPFLAGS = -DG_LOG_DOMAIN=\"Gtk\"
 Applications can choose to leave it as the default %NULL (or `""`)
 domain. However, defining the domain offers the same advantages as
 above.</doc>
-      <type name="gchar" c:type="gchar"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <constant name="LOG_FATAL_MASK" value="5" c:type="G_LOG_FATAL_MASK">
       <doc xml:space="preserve">GLib log levels that are considered fatal by default.
@@ -15281,7 +15281,7 @@ linked against at application run time.</doc>
     </constant>
     <constant name="MININT8" value="-128" c:type="G_MININT8" version="2.4">
       <doc xml:space="preserve">The minimum value which can be held in a #gint8.</doc>
-      <type name="gint8" c:type="gint8"/>
+      <type name="gint" c:type="gint"/>
     </constant>
     <constant name="MINOR_VERSION" value="83" c:type="GLIB_MINOR_VERSION">
       <doc xml:space="preserve">The minor version number of the GLib library.

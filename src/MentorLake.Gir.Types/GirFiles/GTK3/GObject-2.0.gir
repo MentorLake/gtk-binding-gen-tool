@@ -10576,7 +10576,7 @@ This macro should only be used in type implementations.</doc>
     </function-macro>
     <constant name="TYPE_FLAG_RESERVED_ID_BIT" value="1" c:type="G_TYPE_FLAG_RESERVED_ID_BIT">
       <doc xml:space="preserve">A bit in the type number that's supposed to be left untouched.</doc>
-      <type name="Type" c:type="GType"/>
+      <type name="guint" c:type="guint"/>
     </constant>
     <function-macro name="TYPE_FROM_CLASS" c:identifier="G_TYPE_FROM_CLASS" introspectable="0">
       <doc xml:space="preserve">Get the type identifier from a given @class structure.
