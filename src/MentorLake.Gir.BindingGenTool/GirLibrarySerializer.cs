@@ -276,12 +276,15 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	}
 
 	private const string CustomStringMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(NoNativeFreeStringMarshaller))]";
+	private const string CustomStringArrayMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ReadNullTerminatedArrayMarshaller<NoNativeFreeStringMarshaller, string>))]";
 
 	private string SerializeExternMethod(ConvertedMethod m)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"\t[DllImport({_currentNamespace.Name}Library.Name)]");
 		if (m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
+		if (m.ReturnValue.Type.CSharpTypeName == "string[]") output.AppendLine("\t" + CustomStringArrayMarshallerAttribute);
+
 		var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p, true, m.IsInstanceMethod)));
 		output.AppendLine($"\tinternal static extern {SerializeType(m.ReturnValue.Type)} {m.ExternName}({parameters});");
 		return output.ToString();
