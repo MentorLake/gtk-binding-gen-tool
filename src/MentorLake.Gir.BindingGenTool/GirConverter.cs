@@ -6,6 +6,22 @@ using Type = MentorLake.Gir.Core.Type;
 
 namespace BindingTransform.Serialization.Gir;
 
+public class ConvertedNamespace
+{
+	public string Name { get; set; }
+	public string SharedLibrary { get; set; }
+	public List<ConvertedClass> Classes { get; set; } = new();
+	public List<ConvertedInterface> Interfaces { get; set; } = new();
+	public List<ConvertedAlias> Aliases { get; set; } = new();
+	public List<ConvertedUnion> Unions { get; set; } = new();
+	public List<ConvertedUnion> Records { get; set; } = new();
+	public List<ConvertedBitField> Bitfields { get; set; } = new();
+	public List<ConvertedEnumeration> Enumerations { get; set; } = new();
+	public List<ConvertedConstant> Constants { get; set; } = new();
+	public List<ConvertedCallback> Callbacks { get; set; } = new();
+	public List<ConvertedMethod> Functions { get; set; }
+}
+
 public class ConvertedType
 {
 	public string CSharpTypeName { get; set; }
@@ -135,13 +151,12 @@ public class ConvertedClass : ConvertedInterface
 
 public class GirConverter
 {
-	private readonly Namespace _currentNamespace;
+	private Namespace _currentNamespace;
 	private readonly IEnumerable<Interface> _allInterfaces;
 	private readonly List<Namespace> _namespaces;
 
-	public GirConverter(Namespace currentNamespace, List<Repository> repositories)
+	public GirConverter(List<Repository> repositories)
 	{
-		_currentNamespace = currentNamespace;
 		_namespaces = repositories.Select(r => r.Namespace.First()).ToList();
 		_allInterfaces = _namespaces.Where(ns => ns.Interface != null).SelectMany(ns => ns.Interface).ToList();
 	}
@@ -476,10 +491,10 @@ public class GirConverter
 		};
 	}
 
-	private ConvertedSignal ConvertSignal(Signal signal, string className)
+	private ConvertedSignal ConvertSignal(Signal signal, string className, bool isInterface)
 	{
 		var parameters = (signal.Parameters?.Parameter ?? new()).Select(ConvertParameter).ToList();
-		parameters.Insert(0, new ConvertedParameter() { Name = "self", ConvertedType = new() { CSharpTypeName = className, Namespace = _currentNamespace.Name, IsPointer = true, IsSafeHandle = true }, Modifier = "" });
+		parameters.Insert(0, new ConvertedParameter() { Name = "self", ConvertedType = new() { CSharpTypeName = className, Namespace = _currentNamespace.Name, IsPointer = true, IsSafeHandle = true, IsInterface = isInterface }, Modifier = "" });
 		parameters.Add(new ConvertedParameter() { Name = "user_data", ConvertedType = new() { CSharpTypeName = "IntPtr", IsBuiltInType = true }, Modifier = "" });
 
 		return new ConvertedSignal()
@@ -558,7 +573,7 @@ public class GirConverter
 			VirtualMethods = ConvertList(i.VirtualMethod, ConvertFunction),
 			Properties = ConvertList(i.Property, ConvertProperty),
 			Fields = ConvertList(i.Field, ConvertField),
-			Signals = ConvertList(i.Signal, s => ConvertSignal(s, i.Type + "Handle")),
+			Signals = ConvertList(i.Signal, s => ConvertSignal(s, i.Type + "Handle", true)),
 			Callbacks = ConvertList(i.Callback, ConvertCallback),
 			Constants = ConvertList(i.Constant, ConvertConstant)
 		};
@@ -673,10 +688,31 @@ public class GirConverter
 			Properties = ConvertList(c.Property, ConvertProperty),
 			Fields = ConvertList(c.Field, ConvertField),
 			Constructors = ConvertList(c.Constructor, m => ConvertConstructor(m, c.Type ?? c.TypeName)),
-			Signals = ConvertList(c.Signal, s => ConvertSignal(s, className + "Handle")),
+			Signals = ConvertList(c.Signal, s => ConvertSignal(s, className + "Handle", false)),
 			Callbacks = ConvertList(c.Callback, ConvertCallback),
 			Constants = ConvertList(c.Constant, ConvertConstant),
 			Parent = parentClassName
+		};
+	}
+
+	public ConvertedNamespace ConvertNamespace(Namespace ns)
+	{
+		_currentNamespace = ns;
+
+		return new ConvertedNamespace()
+		{
+			Name = ns.Name,
+			SharedLibrary = ns.SharedLibrary,
+			Aliases = ns.Alias.Select(ConvertAlias).ToList(),
+			Bitfields = ns.Bitfield.Select(ConvertBitField).ToList(),
+			Callbacks = ns.Callback.Select(ConvertCallback).ToList(),
+			Classes = ns.Class.Select(ConvertClass).ToList(),
+			Constants = ns.Constant.Select(ConvertConstant).ToList(),
+			Enumerations = ns.Enumeration.Select(ConvertEnumeration).ToList(),
+			Functions = ns.Function == null ? [] : ns.Function.Select(ConvertFunction).ToList(),
+			Interfaces = ns.Interface.Select(ConvertInterface).ToList(),
+			Records = ns.Record.Select(ConvertRecord).ToList(),
+			Unions = ns.Union.Select(ConvertUnion).ToList()
 		};
 	}
 }

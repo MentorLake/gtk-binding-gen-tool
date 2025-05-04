@@ -20,13 +20,10 @@ public static class Program
 			})
 			.ToList();
 
-		var serializer = new GirLibrarySerializer(parsedLibraries);
-
-		foreach (var lib in parsedLibraries)
-		{
-			Console.WriteLine($"Writing {lib.Namespace.First().Name}...");
-			serializer.WriteAllFiles(s_outputBaseDirectory, lib);
-		}
+		var converter = new GirConverter(parsedLibraries);
+		var convertedNamespaces = parsedLibraries.Select(l => converter.ConvertNamespace(l.Namespace.First())).ToList();
+		var serializer = new GirLibrarySerializer();
+		serializer.SerializeNamespaces(convertedNamespaces, s_outputBaseDirectory);
 
 		Console.WriteLine("Done");
 		return Task.CompletedTask;

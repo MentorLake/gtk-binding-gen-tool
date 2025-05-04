@@ -1,12 +1,11 @@
-using System.Diagnostics;
 using System.Text;
-using MentorLake.Gir.Core;
 
 namespace BindingTransform.Serialization.Gir;
 
-public class GirLibrarySerializer(List<Repository> repositories)
+public class GirLibrarySerializer
 {
-	private Namespace _currentNamespace;
+	private ConvertedNamespace _currentNamespace;
+	private List<ConvertedNamespace> _allNamespaces;
 
 	public string SerializeClass(ConvertedClass c)
 	{
@@ -17,9 +16,22 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		foreach (var m in c.Functions) output.AppendLine(SerializeMethod(m, c.Name));
 		output.AppendLine("}");
 
-		if (c.Signals.Any())
+		var allSignals = c.Signals.ToList();
+
+		if (c.Implements.Any())
 		{
-			output.AppendLine(SerializeSignals(c));
+			var allInterfaces = _allNamespaces.SelectMany(n => n.Interfaces).ToList();
+
+			foreach (var implementedInterfaceName in c.Implements)
+			{
+				var i = allInterfaces.First(i => i.Name == implementedInterfaceName);
+				allSignals.AddRange(i.Signals);
+			}
+		}
+
+		if (allSignals.Any())
+		{
+			output.AppendLine(SerializeSignals(c, allSignals));
 		}
 
 		output.AppendLine();
@@ -37,13 +49,13 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		return output.ToString();
 	}
 
-	private string SerializeSignals(ConvertedClass c)
+	private string SerializeSignals(ConvertedInterface c, List<ConvertedSignal> allSignals)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"public static class {c.Name}SignalExtensions");
 		output.AppendLine("{");
 
-		foreach (var signal in c.Signals)
+		foreach (var signal in allSignals)
 		{
 			var handlerReturn = signal.ReturnValue.Type.CSharpTypeName != "void" ? "signalStruct.ReturnValue" : "";
 			var outParameterDefaultAssignments = string.Join("\n\t\t\t", signal.Parameters.Where(p => p.Modifier == "out").Select(p => $"{p.Name} = default;"));
@@ -85,7 +97,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine();
 		output.AppendLine($"public static class {c.Name}SignalStructs");
 		output.AppendLine("{");
-		foreach (var s in c.Signals)
+		foreach (var s in allSignals)
 		{
 			output.AppendLine();
 			output.AppendLine($"public class {s.Name.ToPascalCase()}Signal");
@@ -110,7 +122,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine($"public static class {c.Name}SignalDelegates");
 		output.AppendLine("{");
 
-		foreach (var s in c.Signals)
+		foreach (var s in allSignals)
 		{
 			output.AppendLine();
 			output.AppendLine(SerializeCallback(s));
@@ -352,7 +364,11 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		if (field.Callback != null) type = "IntPtr";
 		else if (field.Type != null) type = field.Type.IsPointer ? "IntPtr" : field.Type.CSharpTypeName;
 		else throw new Exception("Unknown field type: " + field.Name);
-		return $"public {type} {field.Name};";
+
+		var output = new StringBuilder();
+		if (type != "IntPtr" && field.Type is { IsBasicArray: true }) output.Append("[MarshalAs(UnmanagedType.ByValArray)] ");
+		output.Append($"public {type} {field.Name};");
+		return output.ToString();
 	}
 
 	private string SerializeUnion(ConvertedUnion union, string nameOverride = "")
@@ -449,8 +465,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		output.AppendLine($"internal class {s.Name}Impl : BaseSafeHandle, {s.Name}");
 		output.AppendLine("{");
 		output.AppendLine("}");
-
 		output.AppendLine();
+
 		output.AppendLine($"public static class {s.Name}Extensions");
 		output.AppendLine("{");
 		foreach (var m in s.Methods.Concat(s.Functions)) output.AppendLine(SerializeMethod(m, s.Name));
@@ -468,10 +484,21 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		return output.ToString();
 	}
 
-	public void WriteAllFiles(string outputBaseDirectory, Repository repo)
+	public void SerializeNamespaces(List<ConvertedNamespace> namespaces, string outputBaseDirectory)
 	{
-		_currentNamespace = repo.Namespace.First();
-		var converter = new GirConverter(_currentNamespace, repositories);
+		_allNamespaces = namespaces;
+
+		foreach (var lib in namespaces)
+		{
+			Console.WriteLine($"Writing {lib.Name}...");
+			WriteAllFiles(outputBaseDirectory, lib);
+		}
+	}
+
+	public void WriteAllFiles(string outputBaseDirectory, ConvertedNamespace convertedNamespace)
+	{
+		_currentNamespace = convertedNamespace;
+
 		var outputDir = Path.Join(outputBaseDirectory, _currentNamespace.Name);
 		if (Directory.Exists(outputDir)) Directory.Delete(outputDir, true);
 		Directory.CreateDirectory(outputDir);
@@ -481,79 +508,73 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		var libraryNameFile = $"{header}\r\n\r\npublic static class {_currentNamespace.Name}Library {{ public const string Name = \"{_currentNamespace.SharedLibrary}\"; }}";
 		File.WriteAllText(Path.Join(outputDir, $"{_currentNamespace.Name}Library.cs"), libraryNameFile);
 
-		foreach (var cb in _currentNamespace.Callback)
+		foreach (var cb in convertedNamespace.Callbacks)
 		{
 			var output = new StringBuilder();
-			output.AppendLine(header).AppendLine().Append(SerializeCallback(converter.ConvertCallback(cb)));
-			File.WriteAllText(Path.Join(outputDir, cb.Type + ".cs"), output.ToString());
+			output.AppendLine(header).AppendLine().Append(SerializeCallback(cb));
+			File.WriteAllText(Path.Join(outputDir, cb.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Alias)
+		foreach (var alias in convertedNamespace.Aliases)
 		{
 			var output = new StringBuilder();
-			var alias = converter.ConvertAlias(s);
 			output.AppendLine(header).AppendLine().Append(SerializeAlias(alias));
 			File.WriteAllText(Path.Join(outputDir, alias.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Record)
+		foreach (var record in convertedNamespace.Records)
 		{
 			var output = new StringBuilder();
-			var record = converter.ConvertRecord(s);
 			output.AppendLine(header).AppendLine().Append(SerializeUnion(record));
 			File.WriteAllText(Path.Join(outputDir, record.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Union)
+		foreach (var union in convertedNamespace.Unions)
 		{
 			var output = new StringBuilder();
-			var union = converter.ConvertUnion(s);
 			output.AppendLine(header).AppendLine().Append(SerializeUnion(union));
 			File.WriteAllText(Path.Join(outputDir, union.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Bitfield)
+		foreach (var s in convertedNamespace.Bitfields)
 		{
 			var output = new StringBuilder();
-			output.AppendLine(header).AppendLine().Append(SerializeBitfield(converter.ConvertBitField(s)));
-			File.WriteAllText(Path.Join(outputDir, s.Type + ".cs"), output.ToString());
+			output.AppendLine(header).AppendLine().Append(SerializeBitfield(s));
+			File.WriteAllText(Path.Join(outputDir, s.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Enumeration)
+		foreach (var s in convertedNamespace.Enumerations)
 		{
 			var output = new StringBuilder();
-			output.AppendLine(header).AppendLine().Append(SerializeEnumeration(converter.ConvertEnumeration(s)));
-			File.WriteAllText(Path.Join(outputDir, s.Type + ".cs"), output.ToString());
+			output.AppendLine(header).AppendLine().Append(SerializeEnumeration(s));
+			File.WriteAllText(Path.Join(outputDir, s.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Interface)
+		foreach (var i in convertedNamespace.Interfaces)
 		{
 			var output = new StringBuilder();
-			var i = converter.ConvertInterface(s);
 			output.AppendLine(header).AppendLine().Append(SerializeInterface(i));
 			File.WriteAllText(Path.Join(outputDir, i.Name + ".cs"), output.ToString());
 		}
 
-		foreach (var s in _currentNamespace.Class)
+		foreach (var c in convertedNamespace.Classes)
 		{
 			var output = new StringBuilder();
-			var c = converter.ConvertClass(s);
 			output.AppendLine(header).AppendLine().Append(SerializeClass(c));
 			File.WriteAllText(Path.Join(outputDir, $"{c.Name}.cs"), output.ToString());
 		}
 
-		var convertedGlobalFunctions = _currentNamespace.Function == null ? new() : _currentNamespace.Function.Select(converter.ConvertFunction).ToList();
 		var globalFunctionsOutput = new StringBuilder();
 		globalFunctionsOutput.AppendLine(header);
 		globalFunctionsOutput.AppendLine();
 		globalFunctionsOutput.AppendLine($"public class {_currentNamespace.Name}GlobalFunctions");
 		globalFunctionsOutput.AppendLine("{");
-		foreach (var f in convertedGlobalFunctions) globalFunctionsOutput.AppendLine(SerializeMethod(f, _currentNamespace.Name + "GlobalFunctions"));
+		foreach (var f in convertedNamespace.Functions) globalFunctionsOutput.AppendLine(SerializeMethod(f, _currentNamespace.Name + "GlobalFunctions"));
 		globalFunctionsOutput.AppendLine("}");
 		globalFunctionsOutput.AppendLine();
 		globalFunctionsOutput.AppendLine($"internal class {_currentNamespace.Name}GlobalFunctionsExterns");
 		globalFunctionsOutput.AppendLine("{");
-		foreach (var f in convertedGlobalFunctions) globalFunctionsOutput.AppendLine(SerializeExternMethod(f));
+		foreach (var f in convertedNamespace.Functions) globalFunctionsOutput.AppendLine(SerializeExternMethod(f));
 		globalFunctionsOutput.AppendLine("}");
 		File.WriteAllText(Path.Join(outputDir, $"{_currentNamespace.Name}GlobalFunctions.cs"), globalFunctionsOutput.ToString());
 
@@ -563,10 +584,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		constants.AppendLine($"public static class {_currentNamespace.Name}Constants");
 		constants.AppendLine("{");
 
-		foreach (var constant in _currentNamespace.Constant)
+		foreach (var c in convertedNamespace.Constants)
 		{
-			var c = converter.ConvertConstant(constant);
-
 			if (c.Type.CSharpTypeName == "string")
 			{
 				constants.AppendLine($"\tpublic static {SerializeType(c.Type)} {c.Name.NormalizeName()} = \"{c.Value}\";");
