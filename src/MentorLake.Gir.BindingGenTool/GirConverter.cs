@@ -59,6 +59,7 @@ public class ConvertedMethod
 	public ReturnValueTransferOwnership TransferOwnership { get; set; }
 	public bool IsInstanceMethod { get; set; }
 	public string ExternName { get; set; }
+	public bool HasErrorParam { get; set; }
 }
 
 public class ConvertedField
@@ -426,6 +427,7 @@ public class GirConverter
 			ExternName = ctor.Identifier,
 			ReturnValue = new() { Type = new() { CSharpTypeName = className + "Handle", Namespace = _currentNamespace.Name } },
 			Parameters = ctor.Parameters != null ? ctor.Parameters.Parameter.Select(ConvertParameter).ToList() : new(),
+			HasErrorParam = ctor.Throws == ICallableAttrsThrows.Item1,
 		};
 	}
 
@@ -446,7 +448,8 @@ public class GirConverter
 			ReturnValue = ConvertReturnValue(m.ReturnValue),
 			Parameters = parameters.Select(ConvertParameter).ToList(),
 			TransferOwnership = m.ReturnValue.TransferOwnership,
-			IsInstanceMethod = m.Parameters?.InstanceParameterSpecified ?? false
+			IsInstanceMethod = m.Parameters?.InstanceParameterSpecified ?? false,
+			HasErrorParam = m.Throws == ICallableAttrsThrows.Item1,
 		};
 	}
 

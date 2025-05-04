@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using MentorLake.Gir.Core;
 
@@ -87,7 +88,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		foreach (var s in c.Signals)
 		{
 			output.AppendLine();
-			output.AppendLine($"public struct {s.Name.ToPascalCase()}Signal");
+			output.AppendLine($"public class {s.Name.ToPascalCase()}Signal");
 			output.AppendLine("{");
 
 			foreach (var p in s.Parameters)
@@ -206,23 +207,46 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var parameters = string.Join(", ", ctor.Parameters.Select(p => SerializeParameter(p)));
 		var methodName = ctor.Name.ToPascalCase().Replace(className, "");
-		var externCall = $"{className}Externs.{ctor.ExternName}({string.Join(", ", ctor.Parameters.Select(p => $"{p.Modifier} {p.Name}".Trim()))});";
+		var externParams = string.Join(", ", ctor.Parameters.Select(p => $"{p.Modifier} {p.Name}".Trim()));
+
+		if (ctor.HasErrorParam && ctor.Parameters.Any()) externParams += ", out var error";
+		else if (ctor.HasErrorParam) externParams = "out var error";
+
+		var externCall = $"{className}Externs.{ctor.ExternName}({externParams});";
 		var output = new StringBuilder();
 		output.AppendLine($"\tpublic static {SerializeType(ctor.ReturnValue.Type)} {methodName}({parameters})");
 		output.AppendLine("\t{");
-		output.AppendLine($"\t\treturn {externCall}");
+
+		if (ctor.HasErrorParam)
+		{
+			output.AppendLine($"\t\tvar externCallResult = {externCall}");
+			if (ctor.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
+			output.AppendLine("\t\treturn externCallResult;");
+		}
+		else
+		{
+			output.AppendLine($"\t\treturn {externCall}");
+		}
+
 		output.AppendLine("\t}");
 		return output.ToString();
 	}
 
+	private const string CheckAndThrowException = "if (!error.IsInvalid) throw new Exception(error.Dereference().message);";
+
 	private string SerializeMethod(ConvertedMethod m, string className, bool allowGenerics = true)
 	{
 		var methodName = m.Name.ToPascalCase().Replace(className, "");
-		var externCall = $"{className}Externs.{m.ExternName}({string.Join(", ", m.Parameters.Select(p => $"{p.Modifier} {p.Name}".Trim()))});";
+		var externParams = string.Join(", ", m.Parameters.Select(p => $"{p.Modifier} {p.Name}".Trim()));
+
+		if (m.HasErrorParam && m.Parameters.Any()) externParams += ", out var error";
+		else if (m.HasErrorParam) externParams = "out var error";
+
+		var externCall = $"{className}Externs.{m.ExternName}({externParams});";
 		var returnType = SerializeType(m.ReturnValue.Type);
 		var output = new StringBuilder();
 
-		if (m.IsInstanceMethod)
+		if (m.IsInstanceMethod && m.Parameters.First().ConvertedType.IsSafeHandle)
 		{
 			var instanceParam = m.Parameters.First();
 			var otherSerializedParams = m.Parameters.Skip(1).Select(p => SerializeParameter(p)).ToList();
@@ -233,7 +257,9 @@ public class GirLibrarySerializer(List<Repository> repositories)
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static T {methodName}<T>({allSerializedParams}) where T : {className}");
 				output.AppendLine("\t{");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
 				output.AppendLine($"\t\t{externCall}");
+				if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
 				output.AppendLine($"\t\treturn {instanceParam.Name.NormalizeName()};");
 				output.AppendLine("\t}");
 			}
@@ -243,7 +269,9 @@ public class GirLibrarySerializer(List<Repository> repositories)
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static void {methodName}({allSerializedParams})");
 				output.AppendLine("\t{");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
 				output.AppendLine($"\t\t{externCall}");
+				if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
 				output.AppendLine("\t}");
 			}
 			else
@@ -252,7 +280,19 @@ public class GirLibrarySerializer(List<Repository> repositories)
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static {returnType} {methodName}({allSerializedParams})");
 				output.AppendLine("\t{");
-				output.AppendLine($"\t\treturn {externCall}");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
+
+				if (m.HasErrorParam)
+				{
+					output.AppendLine($"\t\tvar externCallResult = {externCall}");
+					if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
+					output.AppendLine("\t\treturn externCallResult;");
+				}
+				else
+				{
+					output.AppendLine($"\t\treturn {externCall}");
+				}
+
 				output.AppendLine("\t}");
 			}
 		}
@@ -262,6 +302,7 @@ public class GirLibrarySerializer(List<Repository> repositories)
 			output.AppendLine($"\tpublic static void {methodName}({parameters})");
 			output.AppendLine("\t{");
 			output.AppendLine($"\t\t{externCall}");
+			if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
 			output.AppendLine("\t}");
 		}
 		else
@@ -269,7 +310,18 @@ public class GirLibrarySerializer(List<Repository> repositories)
 			var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p)));
 			output.AppendLine($"\tpublic static {returnType} {methodName}({parameters})");
 			output.AppendLine("\t{");
-			output.AppendLine($"\t\treturn {externCall}");
+
+			if (m.HasErrorParam)
+			{
+				output.AppendLine($"\t\tvar externCallResult = {externCall}");
+				if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
+				output.AppendLine("\t\treturn externCallResult;");
+			}
+			else
+			{
+				output.AppendLine($"\t\treturn {externCall}");
+			}
+
 			output.AppendLine("\t}");
 		}
 		return output.ToString();
@@ -286,6 +338,10 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		if (m.ReturnValue.Type.CSharpTypeName == "string[]") output.AppendLine("\t" + CustomStringArrayMarshallerAttribute);
 
 		var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p, true, m.IsInstanceMethod)));
+
+		if (m.HasErrorParam && m.Parameters.Any()) parameters += ", out MentorLake.GLib.GErrorHandle error";
+		else if (m.HasErrorParam) parameters = "out MentorLake.GLib.GErrorHandle error";
+
 		output.AppendLine($"\tinternal static extern {SerializeType(m.ReturnValue.Type)} {m.ExternName}({parameters});");
 		return output.ToString();
 	}
@@ -343,7 +399,10 @@ public class GirLibrarySerializer(List<Repository> repositories)
 	{
 		var output = new StringBuilder();
 		output.AppendLine("[Flags]");
-		output.AppendLine($"public enum {field.Name} : long");
+		var isInt = field.Members.All(kv => kv.Value >= int.MinValue) && field.Members.All(kv => kv.Value <= int.MaxValue);
+		var isUInt = field.Members.All(kv => kv.Value >= 0) && field.Members.All(kv => kv.Value <= uint.MaxValue);
+		var enumType = isUInt ? "uint" : isInt ? "int" : "long";
+		output.AppendLine($"public enum {field.Name} : {enumType}");
 		output.AppendLine("{");
 
 		for (var i = 0; i < field.Members.Count; i++)
@@ -382,6 +441,8 @@ public class GirLibrarySerializer(List<Repository> repositories)
 		var output = new StringBuilder();
 		output.AppendLine($"public interface {s.Name}");
 		output.AppendLine("{");
+		output.AppendLine("\tpublic bool IsInvalid { get; }");
+		output.AppendLine("\tpublic bool IsClosed { get; }");
 		output.AppendLine("}");
 
 		output.AppendLine();
