@@ -43,7 +43,7 @@ public class GirLibrarySerializer
 		output.AppendLine();
 		output.AppendLine($"internal class {c.Name}Externs");
 		output.AppendLine("{");
-		foreach (var m in c.Constructors) output.AppendLine(SerializeExternMethod(m));
+		foreach (var m in c.Constructors) output.AppendLine(SerializeExternMethod(m, true));
 		foreach (var m in c.Methods.Concat(c.Functions).DistinctBy(m => m.Name)) output.AppendLine(SerializeExternMethod(m));
 		output.AppendLine("}");
 		return output.ToString();
@@ -269,7 +269,7 @@ public class GirLibrarySerializer
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static T {methodName}<T>({allSerializedParams}) where T : {className}");
 				output.AppendLine("\t{");
-				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid) throw new Exception(\"Invalid handle ({className})\");");
 				output.AppendLine($"\t\t{externCall}");
 				if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
 				output.AppendLine($"\t\treturn {instanceParam.Name.NormalizeName()};");
@@ -281,7 +281,7 @@ public class GirLibrarySerializer
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static void {methodName}({allSerializedParams})");
 				output.AppendLine("\t{");
-				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid) throw new Exception(\"Invalid handle ({className})\");");
 				output.AppendLine($"\t\t{externCall}");
 				if (m.HasErrorParam) output.AppendLine($"\t\t{CheckAndThrowException}");
 				output.AppendLine("\t}");
@@ -292,7 +292,7 @@ public class GirLibrarySerializer
 				var allSerializedParams = string.Join(", ", new List<string>() { serializedInstanceParams }.Concat(otherSerializedParams));
 				output.AppendLine($"\tpublic static {returnType} {methodName}({allSerializedParams})");
 				output.AppendLine("\t{");
-				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid || {instanceParam.Name.NormalizeName()}.IsClosed) throw new Exception(\"Invalid or closed handle ({className})\");");
+				output.AppendLine($"\t\tif ({instanceParam.Name.NormalizeName()}.IsInvalid) throw new Exception(\"Invalid handle ({className})\");");
 
 				if (m.HasErrorParam)
 				{
@@ -339,15 +339,25 @@ public class GirLibrarySerializer
 		return output.ToString();
 	}
 
-	private const string CustomStringMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(NoNativeFreeStringMarshaller))]";
-	private const string CustomStringArrayMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ReadNullTerminatedArrayMarshaller<NoNativeFreeStringMarshaller, string>))]";
+	private const string StringMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(NoNativeFreeStringMarshaller))]";
+	private const string StringArrayMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ReadNullTerminatedArrayMarshaller<NoNativeFreeStringMarshaller, string>))]";
+	private const string SafeHandleMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{safeHandleTypeName}>))]";
+	private const string ConstructorSafeHandleMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstructorSafeHandleMarshaller<{safeHandleTypeName}>))]";
 
-	private string SerializeExternMethod(ConvertedMethod m)
+	private string SerializeExternMethod(ConvertedMethod m, bool isConstructor = false)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"\t[DllImport({_currentNamespace.Name}Library.Name)]");
-		if (m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + CustomStringMarshallerAttribute);
-		if (m.ReturnValue.Type.CSharpTypeName == "string[]") output.AppendLine("\t" + CustomStringArrayMarshallerAttribute);
+		if (m.ReturnValue.Type.CSharpTypeName == "string") output.AppendLine("\t" + StringMarshallerAttribute);
+		if (m.ReturnValue.Type.CSharpTypeName == "string[]") output.AppendLine("\t" + StringArrayMarshallerAttribute);
+
+		if (m.ReturnValue.Type.CSharpTypeName.EndsWith("Handle") && !m.ReturnValue.Type.IsBasicArray)
+		{
+			var safeHandleTypeName = SerializeType(m.ReturnValue.Type);
+			if (m.ReturnValue.Type.IsInterface) safeHandleTypeName += "Impl";
+			var attribute = isConstructor ? ConstructorSafeHandleMarshallerAttribute : SafeHandleMarshallerAttribute;
+			output.AppendLine("\t" + attribute.Replace("{safeHandleTypeName}", safeHandleTypeName));
+		}
 
 		var parameters = string.Join(", ", m.Parameters.Select(p => SerializeParameter(p, true, m.IsInstanceMethod)));
 
