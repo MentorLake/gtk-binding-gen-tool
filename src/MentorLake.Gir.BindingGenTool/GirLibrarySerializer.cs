@@ -1,4 +1,5 @@
 using System.Text;
+using MentorLake.Gir.Core;
 
 namespace BindingTransform.Serialization.Gir;
 
@@ -10,7 +11,9 @@ public class GirLibrarySerializer
 	public string SerializeClass(ConvertedClass c)
 	{
 		var output = new StringBuilder();
-		output.AppendLine($"public class {c.Name}{SerializeInherited(c)}");
+		var partialKeyword = c.Name == "GObjectHandle" ? "partial " : "";
+
+		output.AppendLine($"public {partialKeyword}class {c.Name}{SerializeInherited(c)}");
 		output.AppendLine("{");
 		foreach (var m in c.Constructors) output.AppendLine(SerializeConstructor(m, c.Name));
 		foreach (var m in c.Functions) output.AppendLine(SerializeMethod(m, c.Name));
@@ -44,7 +47,7 @@ public class GirLibrarySerializer
 		output.AppendLine($"internal class {c.Name}Externs");
 		output.AppendLine("{");
 		foreach (var m in c.Constructors) output.AppendLine(SerializeExternMethod(m, true));
-		foreach (var m in c.Methods.Concat(c.Functions).DistinctBy(m => m.Name)) output.AppendLine(SerializeExternMethod(m));
+		foreach (var m in c.Methods.Concat(c.Functions).DistinctBy(m => m.Name)) output.AppendLine(SerializeExternMethod(m, m.TransferOwnership == ReturnValueTransferOwnership.Full && IsGObjectHandle(m.ReturnValue.Type.CSharpTypeName)));
 		output.AppendLine("}");
 		return output.ToString();
 	}
@@ -344,7 +347,16 @@ public class GirLibrarySerializer
 	private const string SafeHandleMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{safeHandleTypeName}>))]";
 	private const string ConstructorSafeHandleMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstructorSafeHandleMarshaller<{safeHandleTypeName}>))]";
 
-	private string SerializeExternMethod(ConvertedMethod m, bool isConstructor = false)
+	private bool IsGObjectHandle(string typeName)
+	{
+		if (typeName == "GObjectHandle") return true;
+		if (string.IsNullOrEmpty(typeName)) return false;
+		var impl = _allNamespaces.SelectMany(ns => ns.Classes).FirstOrDefault(i => i.Name == typeName);
+		if (impl == null) return false;
+		return IsGObjectHandle(impl.Parent);
+	}
+
+	private string SerializeExternMethod(ConvertedMethod m, bool doNotAddRef = false)
 	{
 		var output = new StringBuilder();
 		output.AppendLine($"\t[DllImport({_currentNamespace.Name}Library.Name)]");
@@ -355,7 +367,7 @@ public class GirLibrarySerializer
 		{
 			var safeHandleTypeName = SerializeType(m.ReturnValue.Type);
 			if (m.ReturnValue.Type.IsInterface) safeHandleTypeName += "Impl";
-			var attribute = isConstructor ? ConstructorSafeHandleMarshallerAttribute : SafeHandleMarshallerAttribute;
+			var attribute = doNotAddRef ? ConstructorSafeHandleMarshallerAttribute : SafeHandleMarshallerAttribute;
 			output.AppendLine("\t" + attribute.Replace("{safeHandleTypeName}", safeHandleTypeName));
 		}
 
