@@ -596,7 +596,7 @@ public class GirLibrarySerializer
 		globalFunctionsOutput.AppendLine();
 		globalFunctionsOutput.AppendLine($"internal class {_currentNamespace.Name}GlobalFunctionsExterns");
 		globalFunctionsOutput.AppendLine("{");
-		foreach (var f in convertedNamespace.Functions) globalFunctionsOutput.AppendLine(SerializeExternMethod(f));
+		foreach (var f in convertedNamespace.Functions) globalFunctionsOutput.AppendLine(SerializeExternMethod(f, f.TransferOwnership == ReturnValueTransferOwnership.Full && IsGObjectHandle(f.ReturnValue.Type.CSharpTypeName)));
 		globalFunctionsOutput.AppendLine("}");
 		File.WriteAllText(Path.Join(outputDir, $"{_currentNamespace.Name}GlobalFunctions.cs"), globalFunctionsOutput.ToString());
 
