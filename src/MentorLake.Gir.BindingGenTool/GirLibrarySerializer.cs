@@ -184,6 +184,14 @@ public class GirLibrarySerializer
 				attr = $"[MarshalAs({string.Join(", ", args)})]";
 			}
 		}
+		else if (p.ConvertedType.IsBasicArray && isMarshalled && p.Modifier == "out")
+		{
+			var sizeParamIndex = isInstanceMethod ? p.ConvertedType.ArraySizeIndex + 1 : p.ConvertedType.ArraySizeIndex;
+			var args = new List<string>();
+			args.Add("UnmanagedType.LPArray");
+			if (sizeParamIndex != -1) args.Add($"SizeParamIndex = {sizeParamIndex}");
+			attr = $"[MarshalAs({string.Join(", ", args)})]";
+		}
 
 		return string.Join(" ", new[] { attr, p.Modifier, typeName, p.Name }.Where(s => !string.IsNullOrEmpty(s)));
 	}
