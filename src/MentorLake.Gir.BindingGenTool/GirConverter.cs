@@ -206,6 +206,7 @@ public class GirConverter
 		(new(@"^g?short"), "short"),
 		(new(@"^g?ushort"), "ushort"),
 		(new(@"^g?float"), "float"),
+		(new(@"^guchar"), "byte"),
 		(new(@"^g?(u|uni)?char"), "char"),
 		(new(@"^g?boolean"), "bool"),
 		(new(@"^?g?intptr"), "nint"),
@@ -246,7 +247,7 @@ public class GirConverter
 
 	private void ConvertCTypeToCSharpType(ConvertedType convertedType, bool isOutParam)
 	{
-		if (convertedType.Name == "utf8" || convertedType.Name == "filename")
+		if ((convertedType.Name == "utf8") || convertedType.Name == "filename")
 		{
 			convertedType.CSharpTypeName = "string";
 			convertedType.IsBuiltInType = true;
@@ -279,6 +280,7 @@ public class GirConverter
 		result = MapToBuiltInType(result) ?? result;
 		if (convertedType.IsPointer && result == "void") result = "IntPtr";
 		if (isOutParam && result == "void") result = "IntPtr";
+
 
 		if (result.Contains("*"))
 		{
