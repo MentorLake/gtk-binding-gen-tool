@@ -46,6 +46,7 @@ public class ConvertedParameter()
 	public ConvertedType ConvertedType { get; set; }
 	public string Modifier { get; set; } = "";
 	public string Name { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedCallback
@@ -53,18 +54,20 @@ public class ConvertedCallback
 	public List<ConvertedParameter> Parameters { get; set; }
 	public ConvertedReturnValue ReturnValue { get; set; }
 	public string Name { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedReturnValue
 {
 	public ConvertedType Type { get; set; }
-	public string Docs { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedAlias
 {
 	public ConvertedType WrappedType { get; init; }
 	public string Name { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedMethod
@@ -76,6 +79,7 @@ public class ConvertedMethod
 	public bool IsInstanceMethod { get; set; }
 	public string ExternName { get; set; }
 	public bool HasErrorParam { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedField
@@ -83,6 +87,7 @@ public class ConvertedField
 	public string Name { get; set; }
 	public ConvertedType Type { get; set; }
 	public ConvertedCallback Callback { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedProperty
@@ -93,6 +98,7 @@ public class ConvertedProperty
 	public bool IsReadOnly { get; set; }
 	public string GetFunc { get; set; }
 	public string SetFunc { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedUnion
@@ -103,18 +109,28 @@ public class ConvertedUnion
 	public List<ConvertedMethod> Functions { get; set; }
 	public List<ConvertedField> Fields { get; set; }
 	public List<ConvertedUnion> Records { get; set; }
+	public string[] Comments { get; set; }
+}
+
+public class ConvertedElement
+{
+	public string Name { get; set; }
+	public long Value { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedBitField
 {
 	public string Name { get; set; }
-	public List<KeyValuePair<string, long>> Members { get; set; }
+	public List<ConvertedElement> Members { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedEnumeration
 {
 	public string Name { get; set; }
-	public List<KeyValuePair<string, string>> Members { get; set; }
+	public List<ConvertedElement> Members { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedSignal : ConvertedCallback
@@ -142,6 +158,7 @@ public class ConvertedInterface
 	public List<ConvertedSignal> Signals { get; set; }
 	public List<ConvertedCallback> Callbacks { get; set; }
 	public List<ConvertedConstant> Constants { get; set; }
+	public string[] Comments { get; set; }
 }
 
 public class ConvertedClass : ConvertedInterface
@@ -392,6 +409,7 @@ public class GirConverter
 		{
 			Name = ConvertParameterName(param),
 			ConvertedType = ConvertParameterType(param),
+			Comments = param.DocSpecified ? param.Doc.First().Text : [],
 			Modifier = !param.DirectionSpecified ? "" : param.Direction switch
 			{
 				BaseParamDirection.Out => "out",
@@ -413,7 +431,8 @@ public class GirConverter
 	{
 		return new ConvertedReturnValue()
 		{
-			Type = ConvertTypeRef(returnValue.AnyType)
+			Type = ConvertTypeRef(returnValue.AnyType),
+			Comments = returnValue.DocSpecified ? returnValue.Doc.First().Text : [],
 		};
 	}
 
@@ -423,7 +442,8 @@ public class GirConverter
 		{
 			Name = cb.Type,
 			Parameters = cb.Parameters != null ? cb.Parameters.Parameter.Select(ConvertParameter).ToList() : new(),
-			ReturnValue = ConvertReturnValue(cb.ReturnValue)
+			ReturnValue = ConvertReturnValue(cb.ReturnValue),
+			Comments = cb.DocSpecified ? cb.Doc.First().Text : []
 		};
 	}
 
@@ -432,7 +452,8 @@ public class GirConverter
 		return new ConvertedAlias()
 		{
 			Name = alias.Type,
-			WrappedType = ConvertTypeRef(alias.AnyType)
+			WrappedType = ConvertTypeRef(alias.AnyType),
+			Comments = alias.DocSpecified ? alias.Doc.First().Text : []
 		};
 	}
 
@@ -442,9 +463,10 @@ public class GirConverter
 		{
 			Name = ctor.Name,
 			ExternName = ctor.Identifier,
-			ReturnValue = new() { Type = new() { CSharpTypeName = className + "Handle", Namespace = _currentNamespace.Name } },
+			ReturnValue = new() { Type = new() { CSharpTypeName = className + "Handle", Namespace = _currentNamespace.Name }, Comments = ctor.ReturnValue.DocSpecified ? ctor.ReturnValue.Doc.First().Text : [],},
 			Parameters = ctor.Parameters != null ? ctor.Parameters.Parameter.Select(ConvertParameter).ToList() : new(),
 			HasErrorParam = ctor.Throws == ICallableAttrsThrows.Item1,
+			Comments = ctor.DocSpecified ? ctor.Doc.First().Text : []
 		};
 	}
 
@@ -467,6 +489,7 @@ public class GirConverter
 			TransferOwnership = m.ReturnValue.TransferOwnership,
 			IsInstanceMethod = m.Parameters?.InstanceParameterSpecified ?? false,
 			HasErrorParam = m.Throws == ICallableAttrsThrows.Item1,
+			Comments = m.DocSpecified ? m.Doc.First().Text : []
 		};
 	}
 
@@ -476,7 +499,8 @@ public class GirConverter
 		{
 			Name = field.Name.NormalizeName(),
 			Callback = field.Callback == null ? null : ConvertCallback(field.Callback),
-			Type = field.AnyType == null ? null : ConvertTypeRef(field.AnyType)
+			Type = field.AnyType == null ? null : ConvertTypeRef(field.AnyType),
+			Comments = field.DocSpecified ? field.Doc.First().Text : []
 		};
 	}
 
@@ -489,21 +513,23 @@ public class GirConverter
 			IsReadOnly = property.WritableSpecified && property.Writable != PropertyWritable.Item1,
 			Type = ConvertTypeRef(property.AnyType),
 			GetFunc = property.Getter,
-			SetFunc = property.Setter
+			SetFunc = property.Setter,
+			Comments = property.DocSpecified ? property.Doc.First().Text : []
 		};
 	}
 
 	private ConvertedSignal ConvertSignal(Signal signal, string className, bool isInterface)
 	{
 		var parameters = (signal.Parameters?.Parameter ?? new()).Select(ConvertParameter).ToList();
-		parameters.Insert(0, new ConvertedParameter() { Name = "self", ConvertedType = new() { CSharpTypeName = className, Namespace = _currentNamespace.Name, IsPointer = true, IsSafeHandle = true, IsInterface = isInterface }, Modifier = "" });
-		parameters.Add(new ConvertedParameter() { Name = "user_data", ConvertedType = new() { CSharpTypeName = "IntPtr", IsBuiltInType = true }, Modifier = "" });
+		parameters.Insert(0, new ConvertedParameter() { Name = "self", ConvertedType = new() { CSharpTypeName = className, Namespace = _currentNamespace.Name, IsPointer = true, IsSafeHandle = true, IsInterface = isInterface }, Modifier = "", Comments = []});
+		parameters.Add(new ConvertedParameter() { Name = "user_data", ConvertedType = new() { CSharpTypeName = "IntPtr", IsBuiltInType = true }, Modifier = "", Comments = [] });
 
 		return new ConvertedSignal()
 		{
 			Name = signal.Name,
 			Parameters = parameters,
-			ReturnValue = ConvertReturnValue(signal.ReturnValue)
+			ReturnValue = ConvertReturnValue(signal.ReturnValue),
+			Comments = signal.DocSpecified ? signal.Doc.First().Text : []
 		};
 	}
 
@@ -527,7 +553,8 @@ public class GirConverter
 			Constructors = record.Constructor.Select(c => ConvertConstructor(c, record.Type)).ToList(),
 			Methods = ConvertList(record.Method, ConvertFunction),
 			Functions = ConvertList(record.Function, ConvertFunction),
-			Fields = record.OpaqueSpecified && record.Opaque == RecordOpaque.Item1 ? new() : ConvertList(publicFields, ConvertField)
+			Fields = record.OpaqueSpecified && record.Opaque == RecordOpaque.Item1 ? new() : ConvertList(publicFields, ConvertField),
+			Comments = record.DocSpecified ? record.Doc.First().Text : [],
 		};
 	}
 
@@ -541,7 +568,8 @@ public class GirConverter
 			Methods = ConvertList(union.Method, ConvertFunction),
 			Functions = ConvertList(union.Function, ConvertFunction),
 			Fields = ConvertList(union.Field, ConvertField),
-			Records = ConvertList(union.Record, ConvertRecord)
+			Records = ConvertList(union.Record, ConvertRecord),
+			Comments = union.DocSpecified ? union.Doc.First().Text : []
 		};
 	}
 
@@ -550,7 +578,13 @@ public class GirConverter
 		return new ConvertedBitField()
 		{
 			Name = bitfield.Type,
-			Members = bitfield.Member.Select(m => KeyValuePair.Create(m.Identifier, long.Parse(m.Value))).ToList()
+			Members = bitfield.Member.Select(m => new ConvertedElement()
+			{
+				Name = m.Identifier,
+				Value = long.Parse(m.Value),
+				Comments = m.DocSpecified ? m.Doc.First().Text : []
+			}).ToList(),
+			Comments = bitfield.DocSpecified ? bitfield.Doc.First().Text : []
 		};
 	}
 
@@ -559,7 +593,13 @@ public class GirConverter
 		return new ConvertedEnumeration()
 		{
 			Name = enumeration.Type,
-			Members = enumeration.Member.Select(m => KeyValuePair.Create(m.Identifier, m.Value)).ToList()
+			Members = enumeration.Member.Select(m => new ConvertedElement()
+			{
+				Name = m.Identifier,
+				Value = long.Parse(m.Value),
+				Comments = m.DocSpecified ? m.Doc.First().Text : []
+			}).ToList(),
+			Comments = enumeration.DocSpecified ? enumeration.Doc.First().Text : []
 		};
 	}
 
@@ -568,6 +608,7 @@ public class GirConverter
 		return new ConvertedInterface()
 		{
 			Name = i.Type + "Handle",
+			Comments = i.DocSpecified ? i.Doc.First().Text : [],
 			Implements = i.Implements?.Select(x => x.Name).ToList(),
 			Constructors = ConvertList([i.Constructor], c => ConvertConstructor(c, i.Type)),
 			Functions = ConvertList(i.Function, ConvertFunction),
@@ -693,13 +734,16 @@ public class GirConverter
 			Signals = ConvertList(c.Signal, s => ConvertSignal(s, className + "Handle", false)),
 			Callbacks = ConvertList(c.Callback, ConvertCallback),
 			Constants = ConvertList(c.Constant, ConvertConstant),
-			Parent = parentClassName
+			Parent = parentClassName,
+			Comments = c.DocSpecified ? c.Doc.First().Text : []
 		};
 	}
 
 	public ConvertedNamespace ConvertNamespace(Namespace ns)
 	{
 		_currentNamespace = ns;
+
+
 
 		return new ConvertedNamespace()
 		{
