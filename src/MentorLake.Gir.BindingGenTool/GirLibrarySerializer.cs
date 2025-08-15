@@ -12,7 +12,7 @@ public class GirLibrarySerializer
 	public string SerializeClass(ConvertedClass c)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(c.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(c.Comments));
 		var partialKeyword = c.Name == "GObjectHandle" ? "partial " : "";
 
 		output.AppendLine($"public {partialKeyword}class {c.Name}{SerializeInherited(c)}");
@@ -65,7 +65,7 @@ public class GirLibrarySerializer
 			var handlerReturn = signal.ReturnValue.Type.CSharpTypeName != "void" ? "signalStruct.ReturnValue" : "";
 			var outParameterDefaultAssignments = string.Join("\n\t\t\t", signal.Parameters.Where(p => p.Modifier == "out").Select(p => $"{p.Name} = default;"));
 
-			var method = SerializeSummaryComments(signal.Comments);
+			var method = CommentsSerializer.SerializeSummaryComments(signal.Comments);
 			method += @$"
 	public static IObservable<{c.Name}SignalStructs.{signal.Name.ToPascalCase()}Signal> Signal_{signal.Name.ToPascalCase()}(this {c.Name} instance, GConnectFlags connectFlags = GConnectFlags.G_CONNECT_AFTER)
 	{{
@@ -111,13 +111,13 @@ public class GirLibrarySerializer
 
 			foreach (var p in s.Parameters)
 			{
-				output.AppendLine(SerializeSummaryComments(p.Comments));
+				output.AppendLine(CommentsSerializer.SerializeSummaryComments(p.Comments));
 				output.AppendLine($"\tpublic {SerializeType(p.ConvertedType)} {p.Name.ToPascalCase()};");
 			}
 
 			if (s.ReturnValue.Type.CSharpTypeName != "void")
 			{
-				output.AppendLine(SerializeSummaryComments(s.ReturnValue.Comments));
+				output.AppendLine(CommentsSerializer.SerializeSummaryComments(s.ReturnValue.Comments));
 				output.AppendLine($"\tpublic {SerializeType(s.ReturnValue.Type)} ReturnValue;");
 			}
 
@@ -204,7 +204,7 @@ public class GirLibrarySerializer
 	private string SerializeCallback(ConvertedCallback cb)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeCallbackComments(cb));
+		output.AppendLine(CommentsSerializer.SerializeCallbackComments(cb));
 		output.AppendLine("[UnmanagedFunctionPointer(CallingConvention.Cdecl)]");
 		var parameters = cb.Parameters == null ? "" : string.Join(", ", cb.Parameters.Select(p => SerializeParameter(p, true)));
 		output.AppendLine($"public delegate {SerializeType(cb.ReturnValue.Type)} {cb.Name.NormalizeName()}({parameters});");
@@ -214,14 +214,14 @@ public class GirLibrarySerializer
 	private string SerializeAlias(ConvertedAlias alias)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(alias.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(alias.Comments));
 		output.Append($"public struct {alias.Name}");
 		output.AppendLine();
 		output.AppendLine("{");
 		if (alias.WrappedType.CSharpTypeName != "void") output.AppendLine($"\tpublic {SerializeType(alias.WrappedType)} Value;");
 		output.AppendLine("}");
 		output.AppendLine();
-		output.AppendLine(SerializeSummaryComments(alias.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(alias.Comments));
 		output.AppendLine($"public class {alias.Name}Handle : BaseSafeHandle");
 		output.AppendLine("{");
 		output.AppendLine("}");
@@ -245,7 +245,7 @@ public class GirLibrarySerializer
 
 		var externCall = $"{className}Externs.{ctor.ExternName}({externParams});";
 		var output = new StringBuilder();
-		output.AppendLine(SerializeMethodComments(ctor));
+		output.AppendLine(CommentsSerializer.SerializeMethodComments(ctor));
 		output.AppendLine($"\tpublic static {SerializeType(ctor.ReturnValue.Type)} {methodName}({parameters})");
 		output.AppendLine("\t{");
 
@@ -277,7 +277,7 @@ public class GirLibrarySerializer
 		var externCall = $"{className}Externs.{m.ExternName}({externParams});";
 		var returnType = SerializeType(m.ReturnValue.Type);
 		var output = new StringBuilder();
-		output.AppendLine(SerializeMethodComments(m));
+		output.AppendLine(CommentsSerializer.SerializeMethodComments(m));
 
 		if (m.IsInstanceMethod && m.Parameters.First().ConvertedType.IsSafeHandle)
 		{
@@ -360,86 +360,6 @@ public class GirLibrarySerializer
 		return output.ToString();
 	}
 
-	private static string SerializeSummaryComments(string[] comments)
-	{
-		if (comments == null || !comments.Any()) return "";
-
-		var output = new StringBuilder();
-		output.AppendLine("/// <summary>");
-		output.AppendLine("/// <para>");
-
-		foreach (var s in comments.SelectMany(c => c.Split("\n")))
-		{
-			var c = s;
-
-			if (s.Contains("[`"))
-			{
-				c = Regex.Replace(s, "\\[`([^\\]]*)`(?: key)?\\]\\(([^\\)]*)\\)", "<see href=\"$2\">$1</see>");
-			}
-
-			if (string.IsNullOrEmpty(c.Trim()))
-			{
-				output.AppendLine("/// </para>");
-				output.AppendLine("/// <para>");
-			}
-			else
-			{
-				output.AppendLine("/// " + c);
-			}
-		}
-		output.AppendLine("/// </para>");
-		output.AppendLine("/// </summary>");
-		return output.ToString();
-	}
-
-	private static string SerializeCallbackComments(ConvertedCallback m)
-	{
-		if (m.Comments == null) return "";
-
-		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(m.Comments));
-
-		foreach (var p in m.Parameters)
-		{
-			output.AppendLine($"/// <param name=\"{p.Name}\">");
-			foreach (var s in p.Comments.SelectMany(c => c.Split("\n"))) output.AppendLine($"/// {s}");
-			output.AppendLine("/// </param>");
-		}
-
-		if (m.ReturnValue.Comments.Any())
-		{
-			output.AppendLine("/// <return>");
-			foreach (var s in m.ReturnValue.Comments.SelectMany(c => c.Split("\n"))) output.AppendLine($"/// {s}");
-			output.AppendLine("/// </return>");
-		}
-
-		return output.ToString();
-	}
-
-	private static string SerializeMethodComments(ConvertedMethod m)
-	{
-		if (m.Comments == null) return "";
-
-		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(m.Comments));
-
-		foreach (var p in m.Parameters)
-		{
-			output.AppendLine($"/// <param name=\"{p.Name}\">");
-			foreach (var s in p.Comments.SelectMany(c => c.Split("\n"))) output.AppendLine($"/// {s}");
-			output.AppendLine("/// </param>");
-		}
-
-		if (m.ReturnValue.Comments.Any())
-		{
-			output.AppendLine("/// <return>");
-			foreach (var s in m.ReturnValue.Comments.SelectMany(c => c.Split("\n"))) output.AppendLine($"/// {s}");
-			output.AppendLine("/// </return>");
-		}
-
-		return output.ToString();
-	}
-
 	private const string StringMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(NoNativeFreeStringMarshaller))]";
 	private const string StringArrayMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ReadNullTerminatedArrayMarshaller<NoNativeFreeStringMarshaller, string>))]";
 	private const string SafeHandleMarshallerAttribute = "[return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(DelegateSafeHandleMarshaller<{safeHandleTypeName}>))]";
@@ -486,7 +406,7 @@ public class GirLibrarySerializer
 		else throw new Exception("Unknown field type: " + field.Name);
 
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(field.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(field.Comments));
 		if (type != "IntPtr" && field.Type is { IsBasicArray: true }) output.Append("[MarshalAs(UnmanagedType.ByValArray)] ");
 		output.Append($"public {type} {field.Name};");
 		return output.ToString();
@@ -495,7 +415,7 @@ public class GirLibrarySerializer
 	private string SerializeUnion(ConvertedUnion union, string nameOverride = "")
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(union.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(union.Comments));
 		var unionName = string.IsNullOrEmpty(nameOverride) ? union.Name : nameOverride;
 
 		foreach (var inner in union.Records ?? new()) output.AppendLine(SerializeUnion(inner, unionName + "_" + inner.Name));
@@ -522,7 +442,7 @@ public class GirLibrarySerializer
 		output.AppendLine("}");
 		output.AppendLine();
 
-		output.AppendLine(SerializeSummaryComments(union.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(union.Comments));
 		output.Append($"public struct {unionName}");
 		output.AppendLine();
 		output.AppendLine("{");
@@ -537,7 +457,7 @@ public class GirLibrarySerializer
 	private string SerializeBitfield(ConvertedBitField field)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(field.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(field.Comments));
 		output.AppendLine("[Flags]");
 		var isInt = field.Members.All(kv => kv.Value >= int.MinValue) && field.Members.All(kv => kv.Value <= int.MaxValue);
 		var isUInt = field.Members.All(kv => kv.Value >= 0) && field.Members.All(kv => kv.Value <= uint.MaxValue);
@@ -548,7 +468,7 @@ public class GirLibrarySerializer
 		for (var i = 0; i < field.Members.Count; i++)
 		{
 			var member = field.Members[i];
-			output.AppendLine(SerializeSummaryComments(member.Comments));
+			output.AppendLine(CommentsSerializer.SerializeSummaryComments(member.Comments));
 			output.Append("\t" + member.Name + " = " + member.Value);
 			if (i < field.Members.Count - 1) output.Append(",");
 			output.AppendLine();
@@ -561,7 +481,7 @@ public class GirLibrarySerializer
 	private string SerializeEnumeration(ConvertedEnumeration enumeration)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(enumeration.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(enumeration.Comments));
 		output.AppendLine("[Flags]");
 		output.AppendLine($"public enum {enumeration.Name}");
 		output.AppendLine("{");
@@ -569,7 +489,7 @@ public class GirLibrarySerializer
 		for (var i = 0; i < enumeration.Members.Count; i++)
 		{
 			var member = enumeration.Members[i];
-			output.AppendLine(SerializeSummaryComments(member.Comments));
+			output.AppendLine(CommentsSerializer.SerializeSummaryComments(member.Comments));
 			output.Append("\t" + member.Name + " = " + member.Value);
 			if (i < enumeration.Members.Count - 1) output.Append(",");
 			output.AppendLine();
@@ -582,7 +502,7 @@ public class GirLibrarySerializer
 	private string SerializeInterface(ConvertedInterface s)
 	{
 		var output = new StringBuilder();
-		output.AppendLine(SerializeSummaryComments(s.Comments));
+		output.AppendLine(CommentsSerializer.SerializeSummaryComments(s.Comments));
 
 		output.AppendLine($"public interface {s.Name}");
 		output.AppendLine("{");
